@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>para cielo — expediente 21</title>
+  <style>
+    :root {
+      --bg-dark: #0f0d0b;
+      --paper-bg: #e8d8bd;
+      --paper-border: #8d6b41;
+      --paper-shadow: rgba(0, 0, 0, 0.55);
+      --ink: #2b2118;
+      --accent-gold: #c68a1a;
+      --veronica-blue: #2563eb;
+      --jd-black: #111113;
+      --wax-red: #8b1e1e;
+      --wax-shadow: #540f0f;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      text-transform: lowercase;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: radial-gradient(circle at 50% 50%, #221b14 0%, #0a0806 100%);
+      color: var(--ink);
+      font-family: 'Courier New', Courier, monospace, system-ui;
+      height: 100dvh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* partículas ambientales de fondo */
+    #bg-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* pantalla inicial de sello de cera */
+    #seal-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, #231b14 0%, #080605 100%);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #seal-overlay.broken {
+      opacity: 0;
+      transform: scale(1.06);
+      pointer-events: none;
+    }
+
+    .wax-seal {
+      width: 105px;
+      height: 105px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #ba2d28, var(--wax-red), var(--wax-shadow));
+      box-shadow: 0 10px 25px rgba(0,0,0,0.8), inset 0 -4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(185, 43, 39, 0.35);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      border: 3px dashed rgba(255, 255, 255, 0.25);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .wax-seal:active, .wax-seal:hover {
+      transform: scale(1.05);
+      box-shadow: 0 14px 28px rgba(0,0,0,0.9), 0 0 20px rgba(230, 80, 70, 0.45);
+    }
+
+    .wax-seal::after {
+      content: 'c & r';
+      color: #ffd8ba;
+      font-size: 1.15rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      opacity: 0.9;
+    }
+
+    .seal-hint {
+      color: #d1b894;
+      font-size: 0.85rem;
+      letter-spacing: 1.5px;
+      margin-top: 24px;
+      opacity: 0.75;
+      text-align: center;
+      padding: 0 20px;
+      animation: pulse 2.2s infinite;
+    }
+
+    /* contenedor del expediente */
+    .notebook-container {
+      position: relative;
+      z-index: 10;
+      width: 94%;
+      max-width: 920px;
+      height: 88dvh;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 1s ease 0.3s, transform 1s ease 0.3s;
+    }
+
+    .notebook-container.open {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* pestañas superiores con scroll táctil */
+    .tabs-bar {
+      display: flex;
+      gap: 6px;
+      margin-left: 12px;
+      z-index: 2;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+
+    .tabs-bar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .tab-btn {
+      background: #caa676;
+      border: 1px solid #7d5e38;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      padding: 8px 14px;
+      font-size: 0.82rem;
+      color: #3b2814;
+      cursor: pointer;
+      font-family: inherit;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.15s;
+    }
+
+    .tab-btn.active {
+      background: var(--paper-bg);
+      color: var(--ink);
+      font-weight: bold;
+      border-bottom: 2px solid var(--paper-bg);
+    }
+
+    /* hoja de pergamino */
+    .paper-sheet {
+      flex: 1;
+      background: var(--paper-bg);
+      background-image: 
+        radial-gradient(circle at 10% 15%, rgba(139, 90, 43, 0.08) 0%, transparent 60%),
+        radial-gradient(circle at 90% 85%, rgba(80, 50, 20, 0.12) 0%, transparent 70%);
+      border: 2px solid var(--paper-border);
+      border-radius: 12px;
+      box-shadow: 0 15px 40px var(--paper-shadow), inset 0 0 50px rgba(160, 110, 60, 0.2);
+      display: flex;
+      flex-direction: row;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* panel de texto */
+    .content-panel {
+      flex: 1.15;
+      padding: 28px 32px;
+      overflow-y: auto;
+      display: none;
+      border-right: 1px dashed #a88352;
+    }
+
+    .content-panel.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    /* panel visual que contiene el canvas */
+    .visual-panel {
+      flex: 0.85;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    #stage-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* tipografía e iconografía */
+    h2 {
+      font-size: 1.3rem;
+      color: #3c2410;
+      margin-bottom: 4px;
+      border-bottom: 1px dashed #a88352;
+      padding-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 0.75rem;
+      color: #7b5934;
+      margin-bottom: 14px;
+      letter-spacing: 1px;
+    }
+
+    p {
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--ink);
+      margin-bottom: 14px;
+    }
+
+    .math-box {
+      background: rgba(216, 194, 157, 0.6);
+      border-left: 3px solid var(--accent-gold);
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+
+    .quote-badge {
+      margin-top: 14px;
+      padding: 12px;
+      background: #dfcdb0;
+      border: 1px dashed #9d784a;
+      border-radius: 8px;
+      text-align: center;
+      font-style: italic;
+      color: #382413;
+    }
+
+    /* heathers */
+    .heathers-art {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin: 14px 0;
+    }
+
+    .bomb-box {
+      background: #25201b;
+      border: 2px solid #5a4b3d;
+      border-radius: 8px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .dynamite-sticks {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .stick {
+      width: 65px;
+      height: 10px;
+      background: #801e1e;
+      border-radius: 2px;
+      border: 1px solid #420a0a;
+      position: relative;
+    }
+    .stick::after {
+      content: '';
+      position: absolute;
+      left: 18px;
+      top: 0;
+      width: 12px;
+      height: 100%;
+      background: #111;
+      opacity: 0.85;
+    }
+
+    .bomb-display {
+      background: #000;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 4px 8px;
+      color: #38bdf8;
+      font-size: 0.95rem;
+      font-weight: bold;
+      letter-spacing: 2px;
+      box-shadow: inset 0 0 6px rgba(56, 189, 248, 0.5);
+    }
+
+    .bomb-wires {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .wire-blue { width: 24px; height: 3px; background: var(--veronica-blue); border-radius: 2px; }
+    .wire-black { width: 20px; height: 3px; background: var(--jd-black); border-radius: 2px; }
+
+    /* adaptabilidad en smartphones */
+    @media (max-width: 768px) {
+      .notebook-container {
+        width: 96%;
+        height: 92dvh;
+      }
+      .paper-sheet {
+        flex-direction: column;
+      }
+      /* en móviles el lienzo pasa arriba para que nunca se oculte */
+      .visual-panel {
+        flex: none;
+        height: 220px;
+        width: 100%;
+        border-bottom: 1px dashed #a88352;
+        border-right: none;
+        order: -1;
+      }
+      .content-panel {
+        flex: 1;
+        padding: 18px 20px;
+        border-right: none;
+      }
+      h2 {
+        font-size: 1.15rem;
+      }
+      p, .math-box {
+        font-size: 0.82rem;
+      }
+      .tab-btn {
+        padding: 7px 11px;
+        font-size: 0.75rem;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.45; }
+      50% { opacity: 0.95; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- sobre sellado con lacre -->
+  <div id="seal-overlay">
+    <div class="wax-seal" id="wax-seal" title="abrir expediente"></div>
+    <div class="seal-hint">toca el sello para abrir el expediente de cielo</div>
+  </div>
+
+  <!-- cuaderno vintage de tres actos -->
+  <div class="notebook-container" id="notebook">
+    
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="switchTab(0)">01. girasol & matemáticas</button>
+      <button class="tab-btn" onclick="switchTab(1)">02. la manzanilla (técnicamente amarilla)</button>
+      <button class="tab-btn" onclick="switchTab(2)">03. socios en el crimen</button>
+    </div>
+
+    <div class="paper-sheet">
+      
+      <!-- acta 01 -->
+      <div class="content-panel active" id="tab-0">
+        <h2>el girasol & la proporción áurea</h2>
+        <div class="subtitle">acta 01 — algoritmo de florecimiento procedural</div>
+
+        <p>hola cielo. no quería regalarte una foto estática ni un dibujo genérico de internet. quería programar una flor viva, calculada punto por punto para que nunca se marchite.</p>
+
+        <div class="math-box">
+          <strong>¿cómo funciona la matemática detrás de esto?</strong><br><br>
+          <strong>1. el ángulo dorado (137.508°):</strong><br>
+          para colocar las semillas sin que se encimen, la naturaleza no usa ángulos aleatorios ni números enteros, porque dejarían huecos vacíos. usa la proporción áurea (φ). con θ = n × 137.508°, ninguna semilla bloquea a la siguiente. empaquetamiento perfecto.<br><br>
+          <strong>2. la espiral de fermat (r = c × √n):</strong><br>
+          el radio crece con la raíz cuadrada de n. esto mantiene la densidad homogénea: hay la misma concentración de semillas en el núcleo que en el borde.<br><br>
+          <strong>3. aceleración orgánica con smoothstep (3t² - 2t³):</strong><br>
+          los tallos y pétalos no abren a velocidad constante; usan una curva cúbica para que el florecimiento se sienta suave y natural.
+        </div>
+
+        <p>así como cada coordenada polar está calculada con precisión, nada de lo que siento por ti es un accidente. toca el lienzo para plantar más pétalos.</p>
+
+        <div class="quote-badge">
+          "las flores de código no conocen el invierno."
+        </div>
+      </div>
+
+      <!-- acta 02 -->
+      <div class="content-panel" id="tab-1">
+        <h2>matricaria chamomilla</h2>
+        <div class="subtitle">acta 02 — anexo de flores que sí cuentan</div>
+
+        <p>ayer hiciste la broma de que la manzanilla también cuenta como flor amarilla, y me quedé pensando en eso.</p>
+
+        <div class="math-box">
+          <strong>dictamen botánico y de diseño:</strong><br>
+          el disco central de la manzanilla es 100% amarillo dorado puro. los botánicos lo llaman "inflorescencia en capítulo". aunque sus pétalos exteriores sean blancos, el núcleo es oro vivo.<br><br>
+          en este render, la manzanilla tiene su domo amarillo convexo calculado con pétalos finos que caen suavemente.
+        </div>
+
+        <p>así que tenías toda la razón: la manzanilla califica oficialmente para el 21 de septiembre. además viene con el beneficio extra de calmar cualquier dolor de cabeza y darte paz.</p>
+
+        <div class="quote-badge">
+          "técnicamente amarilla, indiscutiblemente tuya."
+        </div>
+      </div>
+
+      <!-- acta 03 -->
+      <div class="content-panel" id="tab-2">
+        <h2>socios en el crimen</h2>
+        <div class="subtitle">acta 03 — heathers: veronica & jd</div>
+
+        <p>si el mundo fuera un musical, nosotros somos el dúo que no sigue las reglas de nadie. yo con el azul de veronica, y tú con el negro de jd y la dinamita lista para mandar todo a volar si se meten con nosotros.</p>
+
+        <div class="heathers-art">
+          <!-- pistolas cruzadas -->
+          <svg width="140" height="65" viewBox="0 0 150 75" fill="none" style="opacity: 0.9;">
+            <path d="M25 55 L70 30 L85 30 L85 38 L65 42 L55 60 Z" fill="#2563eb" stroke="#1d4ed8" stroke-width="1.5"/>
+            <circle cx="50" cy="45" r="4" fill="#60a5fa"/>
+            <path d="M125 55 L80 30 L65 30 L65 38 L85 42 L95 60 Z" fill="#18181b" stroke="#3f3f46" stroke-width="1.5"/>
+            <circle cx="100" cy="45" r="4" fill="#71717a"/>
+          </svg>
+
+          <!-- dinamita horizontal de jd -->
+          <div class="bomb-box">
+            <div class="dynamite-sticks">
+              <div class="stick"></div>
+              <div class="stick"></div>
+              <div class="stick"></div>
+            </div>
+            <div class="bomb-display">21:09</div>
+            <div class="bomb-wires">
+              <div class="wire-blue"></div>
+              <div class="wire-black"></div>
+            </div>
+          </div>
+        </div>
+
+        <p>en el lienzo puedes ver la simulación física de dos cuerpos celestes orbitando un centro de masa común. ninguna estrella absorbe a la otra; ambas se acompañan en equilibrio eterno.</p>
+
+        <div class="quote-badge" style="font-weight: bold; border-color: var(--veronica-blue);">
+          "somos estrellas complementarias en órbitas dobles."
+        </div>
+      </div>
+
+      <!-- panel visual interactivo con su propio canvas -->
+      <div class="visual-panel" id="visual-panel">
+        <canvas id="stage-canvas"></canvas>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // canvas de fondo ambiental
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+
+    // canvas de la hoja de papel (animación principal)
+    const stageCanvas = document.getElementById('stage-canvas');
+    const stageCtx = stageCanvas.getContext('2d');
+    const visualPanel = document.getElementById('visual-panel');
+
+    const sealOverlay = document.getElementById('seal-overlay');
+    const waxSeal = document.getElementById('wax-seal');
+    const notebook = document.getElementById('notebook');
+
+    let stageWidth, stageHeight, dpr;
+
+    function resize() {
+      // redimensionar fondo
+      bgCanvas.width = window.innerWidth;
+      bgCanvas.height = window.innerHeight;
+
+      // redimensionar lienzo interno con soporte retina para celulares
+      dpr = window.devicePixelRatio || 1;
+      const rect = visualPanel.getBoundingClientRect();
+      stageWidth = rect.width;
+      stageHeight = rect.height;
+
+      stageCanvas.width = stageWidth * dpr;
+      stageCanvas.height = stageHeight * dpr;
+      stageCtx.resetTransform();
+      stageCtx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resize);
+
+    // estado global
+    let currentTab = 0;
+    let bloomProgress = 0;
+    const GOLDEN_ANGLE = 137.5077 * (Math.PI / 180);
+
+    // apertura del sello
+    waxSeal.addEventListener('click', () => {
+      sealOverlay.classList.add('broken');
+      notebook.classList.add('open');
+      setTimeout(resize, 50);
+      bloomProgress = 0;
+    });
+
+    function switchTab(index) {
+      currentTab = index;
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+      document.querySelectorAll('.content-panel').forEach((panel, i) => {
+        panel.classList.toggle('active', i === index);
+      });
+      bloomProgress = 0;
+    }
+
+    function smoothstep(min, max, value) {
+      const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+      return x * x * (3 - 2 * x);
+    }
+
+    // partículas del fondo general
+    const particles = Array.from({ length: 45 }, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      size: Math.random() * 2 + 0.8,
+      speedY: Math.random() * 0.35 + 0.15,
+      phase: Math.random() * Math.PI * 2,
+      color: Math.random() > 0.4 ? '#facc15' : '#38bdf8'
+    }));
+
+    // flores secundarias interactivas
+    const extraFlowers = [];
+
+    // --- 01. renderizado del girasol ---
+    function drawSunflower(cx, cy, progress, scale = 1) {
+      if (progress <= 0) return;
+      stageCtx.save();
+      stageCtx.translate(cx, cy);
+      stageCtx.scale(scale, scale);
+
+      // tallo verde orgánico
+      stageCtx.beginPath();
+      stageCtx.moveTo(0, 15);
+      stageCtx.quadraticCurveTo(10, 80, 0, 160);
+      stageCtx.strokeStyle = '#2f5723';
+      stageCtx.lineWidth = 7;
+      stageCtx.lineCap = 'round';
+      stageCtx.stroke();
+
+      const petalProgress = smoothstep(0.15, 0.95, progress);
+      const coreProgress = smoothstep(0.3, 1.0, progress);
+
+      // capas concéntricas de pétalos amarillos
+      const layers = [
+        { count: 18, len: 100, wid: 24, offset: 0, col: '#d97706' },
+        { count: 18, len: 90, wid: 20, offset: Math.PI / 18, col: '#f59e0b' },
+        { count: 16, len: 76, wid: 18, offset: Math.PI / 9, col: '#fbbf24' }
+      ];
+
+      layers.forEach(layer => {
+        for (let i = 0; i < layer.count; i++) {
+          const angle = (i / layer.count) * Math.PI * 2 + layer.offset;
+          stageCtx.save();
+          stageCtx.rotate(angle);
+          const curLen = layer.len * petalProgress;
+          const curWid = layer.wid * petalProgress;
+
+          const grad = stageCtx.createLinearGradient(0, 0, 0, -curLen);
+          grad.addColorStop(0, '#b45309');
+          grad.addColorStop(0.5, layer.col);
+          grad.addColorStop(1, '#fef08a');
+
+          stageCtx.fillStyle = grad;
+          stageCtx.beginPath();
+          stageCtx.moveTo(0, 0);
+          stageCtx.quadraticCurveTo(curWid, -curLen * 0.5, 0, -curLen);
+          stageCtx.quadraticCurveTo(-curWid, -curLen * 0.5, 0, 0);
+          stageCtx.fill();
+          stageCtx.restore();
+        }
+      });
+
+      // disco central por filotaxis
+      const totalSeeds = 230;
+      const activeSeeds = Math.floor(totalSeeds * coreProgress);
+      const c = 3.2;
+
+      for (let i = 0; i < activeSeeds; i++) {
+        const r = c * Math.sqrt(i);
+        const theta = i * GOLDEN_ANGLE;
+        const x = r * Math.cos(theta);
+        const y = r * Math.sin(theta);
+        const ratio = r / (c * Math.sqrt(totalSeeds));
+
+        stageCtx.beginPath();
+        stageCtx.arc(x, y, 1.2 + (r / 40), 0, Math.PI * 2);
+        stageCtx.fillStyle = ratio < 0.35 ? '#241406' : (ratio < 0.7 ? '#4d2b0e' : '#784315');
+        stageCtx.fill();
+      }
+
+      stageCtx.restore();
+    }
+
+    // --- 02. renderizado de la manzanilla ---
+    function drawChamomile(cx, cy, progress, scale = 1) {
+      if (progress <= 0) return;
+      stageCtx.save();
+      stageCtx.translate(cx, cy);
+      stageCtx.scale(scale, scale);
+
+      // tallo fino
+      stageCtx.beginPath();
+      stageCtx.moveTo(0, 10);
+      stageCtx.quadraticCurveTo(-8, 70, -2, 140);
+      stageCtx.strokeStyle = '#3e6a32';
+      stageCtx.lineWidth = 4;
+      stageCtx.stroke();
+
+      const petalProgress = smoothstep(0.15, 0.9, progress);
+      const coreProgress = smoothstep(0.3, 1.0, progress);
+
+      // pétalos blancos
+      const petalCount = 18;
+      for (let i = 0; i < petalCount; i++) {
+        const angle = (i / petalCount) * Math.PI * 2;
+        stageCtx.save();
+        stageCtx.rotate(angle);
+        const curLen = 65 * petalProgress;
+        const curWid = 14 * petalProgress;
+
+        stageCtx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+        stageCtx.beginPath();
+        stageCtx.moveTo(0, 4);
+        stageCtx.quadraticCurveTo(curWid, -curLen * 0.45, 0, -curLen);
+        stageCtx.quadraticCurveTo(-curWid, -curLen * 0.45, 0, 4);
+        stageCtx.fill();
+
+        stageCtx.strokeStyle = 'rgba(215, 205, 185, 0.6)';
+        stageCtx.lineWidth = 0.8;
+        stageCtx.beginPath();
+        stageCtx.moveTo(0, 0);
+        stageCtx.lineTo(0, -curLen * 0.75);
+        stageCtx.stroke();
+        stageCtx.restore();
+      }
+
+      // domo central abombado
+      const domeRadius = 22 * coreProgress;
+      const grad = stageCtx.createRadialGradient(-3, -3, 2, 0, 0, domeRadius);
+      grad.addColorStop(0, '#fef08a');
+      grad.addColorStop(0.4, '#eab308');
+      grad.addColorStop(1, '#ca8a04');
+
+      stageCtx.beginPath();
+      stageCtx.arc(0, 0, domeRadius, 0, Math.PI * 2);
+      stageCtx.fillStyle = grad;
+      stageCtx.fill();
+
+      // textura del domo
+      for (let i = 0; i < 35 * coreProgress; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const dist = Math.random() * (domeRadius - 2);
+        stageCtx.beginPath();
+        stageCtx.arc(dist * Math.cos(ang), dist * Math.sin(ang), 1.1, 0, Math.PI * 2);
+        stageCtx.fillStyle = 'rgba(161, 98, 7, 0.7)';
+        stageCtx.fill();
+      }
+
+      stageCtx.restore();
+    }
+
+    // --- 03. simulación física de órbitas dobles ---
+    let orbitAngle = 0;
+    const trails = [];
+
+    function drawBinaryStars(cx, cy) {
+      orbitAngle += 0.024;
+      const rx = Math.min(cx * 0.65, 80);
+      const ry = rx * 0.6;
+
+      // posiciones de ambas estrellas
+      const x1 = cx + Math.cos(orbitAngle) * rx;
+      const y1 = cy + Math.sin(orbitAngle) * ry;
+
+      const x2 = cx + Math.cos(orbitAngle + Math.PI) * rx;
+      const y2 = cy + Math.sin(orbitAngle + Math.PI) * ry;
+
+      trails.push({ x1, y1, x2, y2, alpha: 1 });
+      if (trails.length > 40) trails.shift();
+
+      // estelas orbitales sobre el pergamino
+      trails.forEach(t => {
+        t.alpha *= 0.94;
+        stageCtx.beginPath();
+        stageCtx.arc(t.x1, t.y1, 2, 0, Math.PI * 2);
+        stageCtx.fillStyle = `rgba(37, 99, 235, ${t.alpha * 0.75})`;
+        stageCtx.fill();
+
+        stageCtx.beginPath();
+        stageCtx.arc(t.x2, t.y2, 2.5, 0, Math.PI * 2);
+        stageCtx.fillStyle = `rgba(35, 25, 45, ${t.alpha * 0.5})`;
+        stageCtx.fill();
+      });
+
+      // baricentro
+      stageCtx.beginPath();
+      stageCtx.arc(cx, cy, 3, 0, Math.PI * 2);
+      stageCtx.fillStyle = 'rgba(198, 138, 26, 0.6)';
+      stageCtx.fill();
+
+      // estrella veronica (azul cobalto)
+      const gradBlue = stageCtx.createRadialGradient(x1, y1, 2, x1, y1, 20);
+      gradBlue.addColorStop(0, '#ffffff');
+      gradBlue.addColorStop(0.4, '#2563eb');
+      gradBlue.addColorStop(1, 'transparent');
+      stageCtx.beginPath();
+      stageCtx.arc(x1, y1, 20, 0, Math.PI * 2);
+      stageCtx.fillStyle = gradBlue;
+      stageCtx.fill();
+
+      // estrella jd (negra con aureola gravitacional visible sobre pergamino)
+      const gradDark = stageCtx.createRadialGradient(x2, y2, 3, x2, y2, 22);
+      gradDark.addColorStop(0, '#111113');
+      gradDark.addColorStop(0.5, '#4c1d95');
+      gradDark.addColorStop(1, 'transparent');
+      stageCtx.beginPath();
+      stageCtx.arc(x2, y2, 22, 0, Math.PI * 2);
+      stageCtx.fillStyle = gradDark;
+      stageCtx.fill();
+
+      stageCtx.beginPath();
+      stageCtx.arc(x2, y2, 6, 0, Math.PI * 2);
+      stageCtx.fillStyle = '#09090b';
+      stageCtx.fill();
+    }
+
+    // bucle continuo de animación
+    function animate() {
+      // 1. dibujar partículas ambientales en el fondo oscuro
+      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+      particles.forEach(p => {
+        p.y -= p.speedY;
+        p.phase += 0.02;
+        const curX = p.x + Math.sin(p.phase) * 1.5;
+        if (p.y < -10) { p.y = bgCanvas.height + 10; p.x = Math.random() * bgCanvas.width; }
+        bgCtx.beginPath();
+        bgCtx.arc(curX, p.y, p.size, 0, Math.PI * 2);
+        bgCtx.fillStyle = p.color;
+        bgCtx.globalAlpha = 0.35;
+        bgCtx.fill();
+        bgCtx.globalAlpha = 1;
+      });
+
+      // 2. limpiar y dibujar en el lienzo del panel visual
+      stageCtx.clearRect(0, 0, stageWidth, stageHeight);
+
+      if (stageWidth && stageHeight) {
+        const cx = stageWidth / 2;
+        const cy = stageHeight / 2;
+
+        if (bloomProgress < 1) {
+          bloomProgress += 0.012;
+        }
+
+        // escala adaptativa según tamaño de pantalla
+        const scale = Math.min(stageWidth / 320, stageHeight / 320, 1);
+
+        if (currentTab === 0) {
+          drawSunflower(cx, cy - 20 * scale, bloomProgress, scale);
+        } else if (currentTab === 1) {
+          drawChamomile(cx, cy - 15 * scale, bloomProgress, scale * 1.05);
+        } else if (currentTab === 2) {
+          drawBinaryStars(cx, cy);
+        }
+
+        // flores extra plantadas por clic en el panel
+        extraFlowers.forEach(f => {
+          f.progress = Math.min(1, f.progress + 0.04);
+          if (f.type === 'chamomile') {
+            drawChamomile(f.x, f.y, f.progress, f.scale);
+          } else {
+            drawSunflower(f.x, f.y, f.progress, f.scale);
+          }
+        });
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    // interacción al tocar/hacer clic sobre el panel visual
+    visualPanel.addEventListener('pointerdown', (e) => {
+      const rect = visualPanel.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      if (currentTab === 0 || currentTab === 1) {
+        extraFlowers.push({
+          x: clickX,
+          y: clickY,
+          progress: 0,
+          scale: Math.random() * 0.25 + 0.22,
+          type: currentTab === 1 ? 'chamomile' : 'sunflower'
+        });
+        if (extraFlowers.length > 15) extraFlowers.shift();
+      }
+    });
+
+    // inicio
+    resize();
+    animate();
+  </script>
+</body>
+</html>
