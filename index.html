@@ -1,989 +1,1115 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>para cielo — expediente 21</title>
-  <style>
-    :root {
-      --bg-dark: #0f0d0b;
-      --paper-bg: #e8d8bd;
-      --paper-border: #8d6b41;
-      --paper-shadow: rgba(0, 0, 0, 0.55);
-      --ink: #2b2118;
-      --ink-muted: #5c4a38;
-      --accent-gold: #c68a1a;
-      --veronica-blue: #1d4ed8;
-      --jd-black: #17171a;
-      --wax-red: #8b1e1e;
-      --wax-shadow: #540f0f;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      user-select: none;
-      text-transform: lowercase;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      background-color: var(--bg-dark);
-      background-image: radial-gradient(circle at 50% 50%, #221b14 0%, #0a0806 100%);
-      color: var(--ink);
-      font-family: 'Courier New', Courier, monospace, system-ui;
-      height: 100dvh;
-      width: 100vw;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    #bg-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-      pointer-events: none;
-    }
-
-    /* sello de cera c + c */
-    #seal-overlay {
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 50% 50%, #231b14 0%, #080605 100%);
-      z-index: 100;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    #seal-overlay.broken {
-      opacity: 0;
-      transform: scale(1.06);
-      pointer-events: none;
-    }
-
-    .wax-seal {
-      width: 110px;
-      height: 110px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, #ba2d28, var(--wax-red), var(--wax-shadow));
-      box-shadow: 0 10px 25px rgba(0,0,0,0.8), inset 0 -4px 8px rgba(0,0,0,0.5), 0 0 15px rgba(185, 43, 39, 0.35);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      border: 3px dashed rgba(255, 255, 255, 0.25);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .wax-seal:active, .wax-seal:hover {
-      transform: scale(1.05);
-      box-shadow: 0 14px 28px rgba(0,0,0,0.9), 0 0 20px rgba(230, 80, 70, 0.45);
-    }
-
-    .wax-seal::after {
-      content: 'c + c';
-      color: #ffd8ba;
-      font-size: 1.25rem;
-      font-weight: bold;
-      letter-spacing: 3px;
-      opacity: 0.92;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.7);
-    }
-
-    .seal-hint {
-      color: #d1b894;
-      font-size: 0.85rem;
-      letter-spacing: 1.5px;
-      margin-top: 24px;
-      opacity: 0.75;
-      text-align: center;
-      padding: 0 20px;
-      animation: pulse 2.2s infinite;
-    }
-
-    /* cuaderno vintage */
-    .notebook-container {
-      position: relative;
-      z-index: 10;
-      width: 94%;
-      max-width: 920px;
-      height: 88dvh;
-      display: flex;
-      flex-direction: column;
-      opacity: 0;
-      transform: translateY(20px);
-      transition: opacity 1s ease 0.3s, transform 1s ease 0.3s;
-    }
-
-    .notebook-container.open {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    .tabs-bar {
-      display: flex;
-      gap: 6px;
-      margin-left: 12px;
-      z-index: 2;
-      overflow-x: auto;
-      white-space: nowrap;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-      padding-bottom: 2px;
-    }
-
-    .tabs-bar::-webkit-scrollbar {
-      display: none;
-    }
-
-    .tab-btn {
-      background: #caa676;
-      border: 1px solid #7d5e38;
-      border-bottom: none;
-      border-radius: 8px 8px 0 0;
-      padding: 8px 15px;
-      font-size: 0.82rem;
-      color: #3b2814;
-      cursor: pointer;
-      font-family: inherit;
-      flex-shrink: 0;
-      transition: background 0.2s, transform 0.15s;
-    }
-
-    .tab-btn.active {
-      background: var(--paper-bg);
-      color: var(--ink);
-      font-weight: bold;
-      border-bottom: 2px solid var(--paper-bg);
-    }
-
-    .paper-sheet {
-      flex: 1;
-      background: var(--paper-bg);
-      background-image: 
-        radial-gradient(circle at 10% 15%, rgba(139, 90, 43, 0.08) 0%, transparent 60%),
-        radial-gradient(circle at 90% 85%, rgba(80, 50, 20, 0.12) 0%, transparent 70%);
-      border: 2px solid var(--paper-border);
-      border-radius: 12px;
-      box-shadow: 0 15px 40px var(--paper-shadow), inset 0 0 50px rgba(160, 110, 60, 0.2);
-      display: flex;
-      flex-direction: row;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .content-panel {
-      flex: 1.15;
-      padding: 28px 32px;
-      overflow-y: auto;
-      display: none;
-      border-right: 1px dashed #a88352;
-    }
-
-    .content-panel.active {
-      display: block;
-      animation: fadeIn 0.4s ease;
-    }
-
-    .visual-panel {
-      flex: 0.85;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-      cursor: pointer;
-    }
-
-    #stage-canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    h2 {
-      font-size: 1.3rem;
-      color: #3c2410;
-      margin-bottom: 4px;
-      border-bottom: 1px dashed #a88352;
-      padding-bottom: 6px;
-    }
-
-    .subtitle {
-      font-size: 0.75rem;
-      color: #7b5934;
-      margin-bottom: 14px;
-      letter-spacing: 1px;
-    }
-
-    p {
-      font-size: 0.9rem;
-      line-height: 1.6;
-      color: var(--ink);
-      margin-bottom: 14px;
-    }
-
-    .math-box {
-      background: rgba(216, 194, 157, 0.6);
-      border-left: 3px solid var(--accent-gold);
-      padding: 10px 14px;
-      border-radius: 0 8px 8px 0;
-      margin: 12px 0;
-      font-size: 0.84rem;
-      line-height: 1.5;
-    }
-
-    .botanical-tag {
-      display: inline-block;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 0.78rem;
-      margin-right: 6px;
-      margin-bottom: 6px;
-      background: #dfceb1;
-      border: 1px solid #bba37e;
-      color: #44301d;
-    }
-
-    .partner-token {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      margin: 18px 0 14px 0;
-      padding: 12px;
-      background: rgba(223, 205, 177, 0.5);
-      border-radius: 8px;
-      border: 1px solid #c4ab84;
-    }
-
-    .dual-ribbon {
-      display: flex;
-      width: 70px;
-      height: 12px;
-      border-radius: 6px;
-      overflow: hidden;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.25);
-    }
-    .ribbon-blue {
-      flex: 1;
-      background: var(--veronica-blue);
-    }
-    .ribbon-black {
-      flex: 1;
-      background: var(--jd-black);
-    }
-
-    .partner-label {
-      font-size: 0.78rem;
-      letter-spacing: 1.5px;
-      color: #4b3622;
-    }
-
-    .quote-badge {
-      margin-top: 14px;
-      padding: 12px;
-      background: #dfcdb0;
-      border: 1px dashed #9d784a;
-      border-radius: 8px;
-      text-align: center;
-      font-style: italic;
-      color: #382413;
-    }
-
-    @media (max-width: 768px) {
-      .notebook-container {
-        width: 96%;
-        height: 92dvh;
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>para cielo — expediente 21</title>
+    <style>
+      :root {
+        --bg-dark: #0f0d0b;
+        --paper-bg: #e8d8bd;
+        --paper-border: #8d6b41;
+        --paper-shadow: rgba(0, 0, 0, 0.55);
+        --ink: #2b2118;
+        --ink-muted: #5c4a38;
+        --accent-gold: #c68a1a;
+        --veronica-blue: #1d4ed8;
+        --jd-black: #17171a;
+        --wax-red: #8b1e1e;
+        --wax-shadow: #540f0f;
       }
-      .paper-sheet {
-        flex-direction: column;
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        user-select: none;
+        text-transform: lowercase;
+        -webkit-tap-highlight-color: transparent;
       }
-      .visual-panel {
-        flex: none;
-        height: 240px;
+
+      body {
+        background-color: var(--bg-dark);
+        background-image: radial-gradient(
+          circle at 50% 50%,
+          #221b14 0%,
+          #0a0806 100%
+        );
+        color: var(--ink);
+        font-family: "Courier New", Courier, monospace, system-ui;
+        height: 100dvh;
+        width: 100vw;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #bg-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
         width: 100%;
-        border-bottom: 1px dashed #a88352;
-        border-right: none;
-        order: -1;
+        height: 100%;
+        z-index: 1;
+        pointer-events: none;
       }
-      .content-panel {
-        flex: 1;
-        padding: 18px 20px;
-        border-right: none;
+
+      /* sello de cera c + c */
+      #seal-overlay {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          circle at 50% 50%,
+          #231b14 0%,
+          #080605 100%
+        );
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        transition:
+          opacity 1s cubic-bezier(0.16, 1, 0.3, 1),
+          transform 1s cubic-bezier(0.16, 1, 0.3, 1);
       }
-      h2 {
-        font-size: 1.15rem;
+
+      #seal-overlay.broken {
+        opacity: 0;
+        transform: scale(1.06);
+        pointer-events: none;
       }
-      p, .math-box {
-        font-size: 0.82rem;
+
+      .wax-seal {
+        width: 110px;
+        height: 110px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle at 35% 35%,
+          #ba2d28,
+          var(--wax-red),
+          var(--wax-shadow)
+        );
+        box-shadow:
+          0 10px 25px rgba(0, 0, 0, 0.8),
+          inset 0 -4px 8px rgba(0, 0, 0, 0.5),
+          0 0 15px rgba(185, 43, 39, 0.35);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        border: 3px dashed rgba(255, 255, 255, 0.25);
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
       }
+
+      .wax-seal:active,
+      .wax-seal:hover {
+        transform: scale(1.05);
+        box-shadow:
+          0 14px 28px rgba(0, 0, 0, 0.9),
+          0 0 20px rgba(230, 80, 70, 0.45);
+      }
+
+      .wax-seal::after {
+        content: "c + c";
+        color: #ffd8ba;
+        font-size: 1.25rem;
+        font-weight: bold;
+        letter-spacing: 3px;
+        opacity: 0.92;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+      }
+
+      .seal-hint {
+        color: #d1b894;
+        font-size: 0.85rem;
+        letter-spacing: 1.5px;
+        margin-top: 24px;
+        opacity: 0.75;
+        text-align: center;
+        padding: 0 20px;
+        animation: pulse 2.2s infinite;
+      }
+
+      /* cuaderno vintage */
+      .notebook-container {
+        position: relative;
+        z-index: 10;
+        width: 94%;
+        max-width: 920px;
+        height: 88dvh;
+        display: flex;
+        flex-direction: column;
+        opacity: 0;
+        transform: translateY(20px);
+        transition:
+          opacity 1s ease 0.3s,
+          transform 1s ease 0.3s;
+      }
+
+      .notebook-container.open {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .tabs-bar {
+        display: flex;
+        gap: 6px;
+        margin-left: 12px;
+        z-index: 2;
+        overflow-x: auto;
+        white-space: nowrap;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+      }
+
+      .tabs-bar::-webkit-scrollbar {
+        display: none;
+      }
+
       .tab-btn {
-        padding: 7px 11px;
-        font-size: 0.75rem;
+        background: #caa676;
+        border: 1px solid #7d5e38;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        padding: 8px 15px;
+        font-size: 0.82rem;
+        color: #3b2814;
+        cursor: pointer;
+        font-family: inherit;
+        flex-shrink: 0;
+        transition:
+          background 0.2s,
+          transform 0.15s;
       }
-    }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(4px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+      .tab-btn.active {
+        background: var(--paper-bg);
+        color: var(--ink);
+        font-weight: bold;
+        border-bottom: 2px solid var(--paper-bg);
+      }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 0.45; }
-      50% { opacity: 0.95; }
-    }
-  </style>
-</head>
-<body>
+      .paper-sheet {
+        flex: 1;
+        background: var(--paper-bg);
+        background-image:
+          radial-gradient(
+            circle at 10% 15%,
+            rgba(139, 90, 43, 0.08) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            circle at 90% 85%,
+            rgba(80, 50, 20, 0.12) 0%,
+            transparent 70%
+          );
+        border: 2px solid var(--paper-border);
+        border-radius: 12px;
+        box-shadow:
+          0 15px 40px var(--paper-shadow),
+          inset 0 0 50px rgba(160, 110, 60, 0.2);
+        display: flex;
+        flex-direction: row;
+        position: relative;
+        overflow: hidden;
+      }
 
-  <canvas id="bg-canvas"></canvas>
+      .content-panel {
+        flex: 1.15;
+        padding: 28px 32px;
+        overflow-y: auto;
+        display: none;
+        border-right: 1px dashed #a88352;
+      }
 
-  <div id="seal-overlay">
-    <div class="wax-seal" id="wax-seal" title="abrir expediente"></div>
-    <div class="seal-hint">toca el sello para abrir el expediente de cielo</div>
-  </div>
+      .content-panel.active {
+        display: block;
+        animation: fadeIn 0.4s ease;
+      }
 
-  <div class="notebook-container" id="notebook">
-    
-    <div class="tabs-bar">
-      <button class="tab-btn active" onclick="switchTab(0)">01. girasol & matematicas</button>
-      <button class="tab-btn" onclick="switchTab(1)">02. manzanilla, lirio & lavanda</button>
-      <button class="tab-btn" onclick="switchTab(2)">03. partners in crime</button>
+      .visual-panel {
+        flex: 0.85;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        cursor: pointer;
+      }
+
+      #stage-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+
+      h2 {
+        font-size: 1.3rem;
+        color: #3c2410;
+        margin-bottom: 4px;
+        border-bottom: 1px dashed #a88352;
+        padding-bottom: 6px;
+      }
+
+      .subtitle {
+        font-size: 0.75rem;
+        color: #7b5934;
+        margin-bottom: 14px;
+        letter-spacing: 1px;
+      }
+
+      p {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: var(--ink);
+        margin-bottom: 14px;
+      }
+
+      .math-box {
+        background: rgba(216, 194, 157, 0.6);
+        border-left: 3px solid var(--accent-gold);
+        padding: 10px 14px;
+        border-radius: 0 8px 8px 0;
+        margin: 12px 0;
+        font-size: 0.84rem;
+        line-height: 1.5;
+      }
+
+      .botanical-tag {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.78rem;
+        margin-right: 6px;
+        margin-bottom: 6px;
+        background: #dfceb1;
+        border: 1px solid #bba37e;
+        color: #44301d;
+      }
+
+      .partner-token {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        margin: 18px 0 14px 0;
+        padding: 12px;
+        background: rgba(223, 205, 177, 0.5);
+        border-radius: 8px;
+        border: 1px solid #c4ab84;
+      }
+
+      .dual-ribbon {
+        display: flex;
+        width: 70px;
+        height: 12px;
+        border-radius: 6px;
+        overflow: hidden;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+      }
+      .ribbon-blue {
+        flex: 1;
+        background: var(--veronica-blue);
+      }
+      .ribbon-black {
+        flex: 1;
+        background: var(--jd-black);
+      }
+
+      .partner-label {
+        font-size: 0.78rem;
+        letter-spacing: 1.5px;
+        color: #4b3622;
+      }
+
+      .quote-badge {
+        margin-top: 14px;
+        padding: 12px;
+        background: #dfcdb0;
+        border: 1px dashed #9d784a;
+        border-radius: 8px;
+        text-align: center;
+        font-style: italic;
+        color: #382413;
+      }
+
+      @media (max-width: 768px) {
+        .notebook-container {
+          width: 96%;
+          height: 92dvh;
+        }
+        .paper-sheet {
+          flex-direction: column;
+        }
+        .visual-panel {
+          flex: none;
+          height: 240px;
+          width: 100%;
+          border-bottom: 1px dashed #a88352;
+          border-right: none;
+          order: -1;
+        }
+        .content-panel {
+          flex: 1;
+          padding: 18px 20px;
+          border-right: none;
+        }
+        h2 {
+          font-size: 1.15rem;
+        }
+        p,
+        .math-box {
+          font-size: 0.82rem;
+        }
+        .tab-btn {
+          padding: 7px 11px;
+          font-size: 0.75rem;
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.45;
+        }
+        50% {
+          opacity: 0.95;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="seal-overlay">
+      <div class="wax-seal" id="wax-seal" title="abrir expediente"></div>
+      <div class="seal-hint">
+        toca el sello para abrir el expediente de cielo
+      </div>
     </div>
 
-    <div class="paper-sheet">
-      
-      <!-- acta 01 -->
-      <div class="content-panel active" id="tab-0">
-        <h2>el girasol & la proporcion aurea</h2>
-        <div class="subtitle">acta 01 — algoritmo de florecimiento procedural</div>
-
-        <p>hola corazon, no queria regalarte una foto asi nomas ni una imagen hecha con gemini xd. queria programar una flor viva, calculada punto por punto para que nunca se marchite</p>
-
-        <div class="math-box">
-          <strong>como funciona?</strong><br><br>
-          <strong>1. el angulo dorado (137.508°):</strong><br>
-          para colocar las semillas sin que se encimen, la naturaleza no usa angulos aleatorios ni fracciones simples, porque dejarian huecos vacios. usa la proporcion aurea (φ). con θ = n × 137.508°, ninguna semilla bloquea a la siguiente<br><br>
-          <strong>2. la espiral de fermat (r = c × √n):</strong><br>
-          el radio crece proporcionalmente con la raiz cuadrada de n. esto mantiene la densidad homogenea: hay la misma concentracion de semillas en el nucleo que en el borde.<br><br>
-          <strong>3. aceleracion con smoothstep (3t² - 2t³):</strong><br>
-          los tallos y petalos no abren a velocidad constante; usan una curva cubica para que la animacion se sienta como que natural
-        </div>
-
-        <p>asi como cada coordenada polar esta calculada con precision, nada de lo que siento por ti es un accidente. toca el lienzo para plantar mas flores.</p>
-
-        <div class="quote-badge">
-          "las flores de codigo no conocen el invierno"
-        </div>
+    <div class="notebook-container" id="notebook">
+      <div class="tabs-bar">
+        <button class="tab-btn active" onclick="switchTab(0)">
+          01. girasol & matematicas
+        </button>
+        <button class="tab-btn" onclick="switchTab(1)">
+          02. manzanilla, lirio & lavanda
+        </button>
+        <button class="tab-btn" onclick="switchTab(2)">
+          03. partners in crime
+        </button>
       </div>
 
-      <!-- acta 02 -->
-      <div class="content-panel" id="tab-1">
-        <h2>mil flores</h2>
-        <div class="subtitle">acta 02 — manzanilla, lirio amarillo & lavanda</div>
-
-        <p>ayer me dijiste que te hacia falta una manzanilla, y me puse a investigar sobre tus flores favoritas.</p>
-
-        <div style="margin: 10px 0;">
-          <span class="botanical-tag">matricaria chamomilla</span>
-          <span class="botanical-tag">lavandula angustifolia</span>
-          <span class="botanical-tag">lilium flavum (lirio amarillo)</span>
-        </div>
-
-        <div class="math-box">
-          <strong>sabias que tambien hay lirios amarillos?</strong><br>
-          en botanica, el <em>lilium</em> amarillo simboliza felicidad, nobleza y lealtad incondicional, su centro calido y sus petalos curvados hacia afuera combinan perfecto con el nucleo de oro de la manzanilla.<br><br>
-          asi que este ramo tiene doble respaldo: el amarillo indiscutible de la manzanilla, la elegancia frontal del lirio amarillo y el toque relajante de la lavanda.
-        </div>
-
-        <p>todo cuenta para el 21 de septiembre. toca el panel, ahora brotan manzanillas, lirios amarillos o lavanda al azar.</p>
-
-        <div class="quote-badge">
-          "tecnicamente amarilla, indiscutiblemente tuya\<3"
-        </div>
-      </div>
-
-      <!-- acta 03 -->
-      <div class="content-panel" id="tab-2">
-        <h2>partners in crime</h2>
-        <div class="subtitle">acta 03 — veronica & jd</div>
-
-        <p>si el mundo fuera un musical, tu y yo seriamos los protas. no necesitamos disfraces literales: nos bastan los colores y la complicidad</p>
-
-        <div class="partner-token">
-          <div class="dual-ribbon">
-            <div class="ribbon-blue" title="veronica"></div>
-            <div class="ribbon-black" title="jd"></div>
+      <div class="paper-sheet">
+        <!-- acta 01 -->
+        <div class="content-panel active" id="tab-0">
+          <h2>el girasol & la proporcion aurea</h2>
+          <div class="subtitle">
+            acta 01 — algoritmo de florecimiento procedural
           </div>
-          <div class="partner-label">veronica × jd</div>
+
+          <p>
+            hola corazon, no queria regalarte una foto asi nomas ni una imagen
+            hecha con gemini xd. queria programar una flor viva, calculada punto
+            por punto para que nunca se marchite
+          </p>
+
+          <div class="math-box">
+            <strong>como funciona?</strong><br /><br />
+            <strong>1. el angulo dorado (137.508°):</strong><br />
+            para colocar las semillas sin que se encimen, la naturaleza no usa
+            angulos aleatorios ni fracciones simples, porque dejarian huecos
+            vacios. usa la proporcion aurea (φ). con θ = n × 137.508°, ninguna
+            semilla bloquea a la siguiente<br /><br />
+            <strong>2. la espiral de fermat (r = c × √n):</strong><br />
+            el radio crece proporcionalmente con la raiz cuadrada de n. esto
+            mantiene la densidad homogenea: hay la misma concentracion de
+            semillas en el nucleo que en el borde.<br /><br />
+            <strong>3. aceleracion con smoothstep (3t² - 2t³):</strong><br />
+            los tallos y petalos no abren a velocidad constante; usan una curva
+            cubica para que la animacion se sienta como que natural
+          </div>
+
+          <p>
+            asi como cada coordenada polar esta calculada con precision, nada de
+            lo que siento por ti es un accidente. toca el lienzo para plantar
+            mas flores.
+          </p>
+
+          <div class="quote-badge">
+            "las flores de codigo no conocen el invierno"
+          </div>
         </div>
 
-        <p>en el lienzo puedes ver la simulacion fisica de dos cuerpos celestes orbitando un centro de masa comun: una estrella en azul cobalto y la otra en negro obsidiana con su halo gravitacional, ninguna estrella absorbe a la otra, ya que ambas se acompañan en equilibrio eterno\<3</p>
+        <!-- acta 02 -->
+        <div class="content-panel" id="tab-1">
+          <h2>mil flores</h2>
+          <div class="subtitle">
+            acta 02 — manzanilla, lirio amarillo & lavanda
+          </div>
 
-        <div class="quote-badge" style="font-weight: bold; border-color: var(--veronica-blue);">
-          "somos estrellas complementarias en orbitas dobles"
+          <p>
+            ayer me dijiste que te hacia falta una manzanilla, y me puse a
+            investigar sobre tus flores favoritas.
+          </p>
+
+          <div style="margin: 10px 0">
+            <span class="botanical-tag">matricaria chamomilla</span>
+            <span class="botanical-tag">lavandula angustifolia</span>
+            <span class="botanical-tag">lilium flavum (lirio amarillo)</span>
+          </div>
+
+          <div class="math-box">
+            <strong>sabias que tambien hay lirios amarillos?</strong><br />
+            en botanica, el <em>lilium</em> amarillo simboliza felicidad,
+            nobleza y lealtad incondicional, su centro calido y sus petalos
+            curvados hacia afuera combinan perfecto con el nucleo de oro de la
+            manzanilla.<br /><br />
+            asi que este ramo tiene doble respaldo: el amarillo indiscutible de
+            la manzanilla, la elegancia frontal del lirio amarillo y el toque
+            relajante de la lavanda.
+          </div>
+
+          <p>
+            todo cuenta para el 21 de septiembre. toca el panel, ahora brotan
+            manzanillas, lirios amarillos o lavanda al azar.
+          </p>
+
+          <div class="quote-badge">
+            "tecnicamente amarilla, indiscutiblemente tuya\<3"
+          </div>
+        </div>
+
+        <!-- acta 03 -->
+        <div class="content-panel" id="tab-2">
+          <h2>partners in crime</h2>
+          <div class="subtitle">acta 03 — veronica & jd</div>
+
+          <p>
+            si el mundo fuera un musical, tu y yo seriamos los protas. no
+            necesitamos disfraces literales: nos bastan los colores y la
+            complicidad
+          </p>
+
+          <div class="partner-token">
+            <div class="dual-ribbon">
+              <div class="ribbon-blue" title="veronica"></div>
+              <div class="ribbon-black" title="jd"></div>
+            </div>
+            <div class="partner-label">veronica × jd</div>
+          </div>
+
+          <p>
+            en el lienzo puedes ver la simulacion fisica de dos cuerpos celestes
+            orbitando un centro de masa comun: una estrella en azul cobalto y la
+            otra en negro obsidiana con su halo gravitacional, ninguna estrella
+            absorbe a la otra, ya que ambas se acompañan en equilibrio eterno\<3
+          </p>
+
+          <div
+            class="quote-badge"
+            style="font-weight: bold; border-color: var(--veronica-blue)"
+          >
+            "somos estrellas complementarias en orbitas dobles"
+          </div>
+        </div>
+
+        <div class="visual-panel" id="visual-panel">
+          <canvas id="stage-canvas"></canvas>
         </div>
       </div>
-
-      <div class="visual-panel" id="visual-panel">
-        <canvas id="stage-canvas"></canvas>
-      </div>
-
     </div>
-  </div>
 
-  <script>
-    const bgCanvas = document.getElementById('bg-canvas');
-    const bgCtx = bgCanvas.getContext('2d');
+    <script>
+      const bgCanvas = document.getElementById("bg-canvas");
+      const bgCtx = bgCanvas.getContext("2d");
 
-    const stageCanvas = document.getElementById('stage-canvas');
-    const stageCtx = stageCanvas.getContext('2d');
-    const visualPanel = document.getElementById('visual-panel');
+      const stageCanvas = document.getElementById("stage-canvas");
+      const stageCtx = stageCanvas.getContext("2d");
+      const visualPanel = document.getElementById("visual-panel");
 
-    const sealOverlay = document.getElementById('seal-overlay');
-    const waxSeal = document.getElementById('wax-seal');
-    const notebook = document.getElementById('notebook');
+      const sealOverlay = document.getElementById("seal-overlay");
+      const waxSeal = document.getElementById("wax-seal");
+      const notebook = document.getElementById("notebook");
 
-    let stageWidth, stageHeight, dpr;
+      let stageWidth, stageHeight, dpr;
 
-    function resize() {
-      bgCanvas.width = window.innerWidth;
-      bgCanvas.height = window.innerHeight;
+      function resize() {
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
 
-      dpr = window.devicePixelRatio || 1;
-      const rect = visualPanel.getBoundingClientRect();
-      stageWidth = rect.width;
-      stageHeight = rect.height;
+        dpr = window.devicePixelRatio || 1;
+        const rect = visualPanel.getBoundingClientRect();
+        stageWidth = rect.width;
+        stageHeight = rect.height;
 
-      stageCanvas.width = stageWidth * dpr;
-      stageCanvas.height = stageHeight * dpr;
-      stageCtx.resetTransform();
-      stageCtx.scale(dpr, dpr);
-    }
-    window.addEventListener('resize', resize);
+        stageCanvas.width = stageWidth * dpr;
+        stageCanvas.height = stageHeight * dpr;
+        stageCtx.resetTransform();
+        stageCtx.scale(dpr, dpr);
+      }
+      window.addEventListener("resize", resize);
 
-    let currentTab = 0;
-    let bloomProgress = 0;
-    const GOLDEN_ANGLE = 137.5077 * (Math.PI / 180);
+      let currentTab = 0;
+      let bloomProgress = 0;
+      const GOLDEN_ANGLE = 137.5077 * (Math.PI / 180);
 
-    waxSeal.addEventListener('click', () => {
-      sealOverlay.classList.add('broken');
-      notebook.classList.add('open');
-      setTimeout(resize, 60);
-      bloomProgress = 0;
-    });
-
-    function switchTab(index) {
-      currentTab = index;
-      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
-        btn.classList.toggle('active', i === index);
+      waxSeal.addEventListener("click", () => {
+        sealOverlay.classList.add("broken");
+        notebook.classList.add("open");
+        setTimeout(resize, 60);
+        bloomProgress = 0;
       });
-      document.querySelectorAll('.content-panel').forEach((panel, i) => {
-        panel.classList.toggle('active', i === index);
-      });
-      bloomProgress = 0;
-    }
 
-    function smoothstep(min, max, value) {
-      const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
-      return x * x * (3 - 2 * x);
-    }
+      function switchTab(index) {
+        currentTab = index;
+        document.querySelectorAll(".tab-btn").forEach((btn, i) => {
+          btn.classList.toggle("active", i === index);
+        });
+        document.querySelectorAll(".content-panel").forEach((panel, i) => {
+          panel.classList.toggle("active", i === index);
+        });
+        bloomProgress = 0;
+      }
 
-    const particles = Array.from({ length: 45 }, () => ({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      size: Math.random() * 2 + 0.8,
-      speedY: Math.random() * 0.35 + 0.15,
-      phase: Math.random() * Math.PI * 2,
-      color: Math.random() > 0.4 ? '#facc15' : '#a78bfa'
-    }));
+      function smoothstep(min, max, value) {
+        const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+        return x * x * (3 - 2 * x);
+      }
 
-    const extraFlowers = [];
+      const particles = Array.from({ length: 45 }, () => ({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        size: Math.random() * 2 + 0.8,
+        speedY: Math.random() * 0.35 + 0.15,
+        phase: Math.random() * Math.PI * 2,
+        color: Math.random() > 0.4 ? "#facc15" : "#a78bfa",
+      }));
 
-    // --- 01. girasol ---
-    function drawSunflower(cx, cy, progress, scale = 1) {
-      if (progress <= 0) return;
-      stageCtx.save();
-      stageCtx.translate(cx, cy);
-      stageCtx.scale(scale, scale);
+      const extraFlowers = [];
 
-      stageCtx.beginPath();
-      stageCtx.moveTo(0, 15);
-      stageCtx.quadraticCurveTo(10, 80, 0, 160);
-      stageCtx.strokeStyle = '#2f5723';
-      stageCtx.lineWidth = 7;
-      stageCtx.lineCap = 'round';
-      stageCtx.stroke();
+      function drawSunflower(cx, cy, progress, scale = 1) {
+        if (progress <= 0) return;
+        stageCtx.save();
+        stageCtx.translate(cx, cy);
+        stageCtx.scale(scale, scale);
 
-      const petalProgress = smoothstep(0.15, 0.95, progress);
-      const coreProgress = smoothstep(0.3, 1.0, progress);
+        stageCtx.beginPath();
+        stageCtx.moveTo(0, 15);
+        stageCtx.quadraticCurveTo(10, 80, 0, 160);
+        stageCtx.strokeStyle = "#2f5723";
+        stageCtx.lineWidth = 7;
+        stageCtx.lineCap = "round";
+        stageCtx.stroke();
 
-      const layers = [
-        { count: 18, len: 100, wid: 24, offset: 0, col: '#d97706' },
-        { count: 18, len: 90, wid: 20, offset: Math.PI / 18, col: '#f59e0b' },
-        { count: 16, len: 76, wid: 18, offset: Math.PI / 9, col: '#fbbf24' }
-      ];
+        const petalProgress = smoothstep(0.15, 0.95, progress);
+        const coreProgress = smoothstep(0.3, 1.0, progress);
 
-      layers.forEach(layer => {
-        for (let i = 0; i < layer.count; i++) {
-          const angle = (i / layer.count) * Math.PI * 2 + layer.offset;
+        const layers = [
+          { count: 18, len: 100, wid: 24, offset: 0, col: "#d97706" },
+          { count: 18, len: 90, wid: 20, offset: Math.PI / 18, col: "#f59e0b" },
+          { count: 16, len: 76, wid: 18, offset: Math.PI / 9, col: "#fbbf24" },
+        ];
+
+        layers.forEach((layer) => {
+          for (let i = 0; i < layer.count; i++) {
+            const angle = (i / layer.count) * Math.PI * 2 + layer.offset;
+            stageCtx.save();
+            stageCtx.rotate(angle);
+            const curLen = layer.len * petalProgress;
+            const curWid = layer.wid * petalProgress;
+
+            const grad = stageCtx.createLinearGradient(0, 0, 0, -curLen);
+            grad.addColorStop(0, "#b45309");
+            grad.addColorStop(0.5, layer.col);
+            grad.addColorStop(1, "#fef08a");
+
+            stageCtx.fillStyle = grad;
+            stageCtx.beginPath();
+            stageCtx.moveTo(0, 0);
+            stageCtx.quadraticCurveTo(curWid, -curLen * 0.5, 0, -curLen);
+            stageCtx.quadraticCurveTo(-curWid, -curLen * 0.5, 0, 0);
+            stageCtx.fill();
+            stageCtx.restore();
+          }
+        });
+
+        const totalSeeds = 230;
+        const activeSeeds = Math.floor(totalSeeds * coreProgress);
+        const c = 3.2;
+
+        for (let i = 0; i < activeSeeds; i++) {
+          const r = c * Math.sqrt(i);
+          const theta = i * GOLDEN_ANGLE;
+          const x = r * Math.cos(theta);
+          const y = r * Math.sin(theta);
+          const ratio = r / (c * Math.sqrt(totalSeeds));
+
+          stageCtx.beginPath();
+          stageCtx.arc(x, y, 1.2 + r / 40, 0, Math.PI * 2);
+          stageCtx.fillStyle =
+            ratio < 0.35 ? "#241406" : ratio < 0.7 ? "#4d2b0e" : "#784315";
+          stageCtx.fill();
+        }
+
+        stageCtx.restore();
+      }
+
+      function drawChamomileFlower(cx, cy, progress, scale = 1) {
+        return;
+        stageCtx.save();
+        stageCtx.translate(cx, cy);
+        stageCtx.scale(scale, scale);
+
+        stageCtx.beginPath();
+        stageCtx.moveTo(0, 10);
+        stageCtx.quadraticCurveTo(-6, 60, -2, 130);
+        stageCtx.strokeStyle = "#3e6a32";
+        stageCtx.lineWidth = 4;
+        stageCtx.stroke();
+
+        const petalProgress = smoothstep(0.15, 0.9, progress);
+        const coreProgress = smoothstep(0.3, 1.0, progress);
+
+        const petalCount = 18;
+        for (let i = 0; i < petalCount; i++) {
+          const angle = (i / petalCount) * Math.PI * 2;
           stageCtx.save();
           stageCtx.rotate(angle);
-          const curLen = layer.len * petalProgress;
-          const curWid = layer.wid * petalProgress;
+          const curLen = 60 * petalProgress;
+          const curWid = 13 * petalProgress;
 
-          const grad = stageCtx.createLinearGradient(0, 0, 0, -curLen);
-          grad.addColorStop(0, '#b45309');
-          grad.addColorStop(0.5, layer.col);
-          grad.addColorStop(1, '#fef08a');
+          stageCtx.fillStyle = "rgba(255, 255, 255, 0.96)";
+          stageCtx.beginPath();
+          stageCtx.moveTo(0, 4);
+          stageCtx.quadraticCurveTo(curWid, -curLen * 0.45, 0, -curLen);
+          stageCtx.quadraticCurveTo(-curWid, -curLen * 0.45, 0, 4);
+          stageCtx.fill();
+
+          stageCtx.strokeStyle = "rgba(215, 205, 185, 0.6)";
+          stageCtx.lineWidth = 0.8;
+          stageCtx.beginPath();
+          stageCtx.moveTo(0, 0);
+          stageCtx.lineTo(0, -curLen * 0.75);
+          stageCtx.stroke();
+          stageCtx.restore();
+        }
+
+        const domeRadius = 21 * coreProgress;
+        const grad = stageCtx.createRadialGradient(-3, -3, 2, 0, 0, domeRadius);
+        grad.addColorStop(0, "#fef08a");
+        grad.addColorStop(0.4, "#eab308");
+        grad.addColorStop(1, "#ca8a04");
+
+        stageCtx.beginPath();
+        stageCtx.arc(0, 0, domeRadius, 0, Math.PI * 2);
+        stageCtx.fillStyle = grad;
+        stageCtx.fill();
+
+        const domeSeeds = Math.floor(42 * coreProgress);
+        for (let i = 0; i < domeSeeds; i++) {
+          const r = (domeRadius - 2.5) * Math.sqrt(i / 42);
+          const theta = i * 2.39996;
+          stageCtx.beginPath();
+          stageCtx.arc(
+            r * Math.cos(theta),
+            r * Math.sin(theta),
+            1.1,
+            0,
+            Math.PI * 2,
+          );
+          stageCtx.fillStyle = "rgba(161, 98, 7, 0.65)";
+          stageCtx.fill();
+        }
+
+        stageCtx.restore();
+      }
+
+      function drawLavender(cx, cy, progress, scale = 1) {
+        stageCtx.save();
+        stageCtx.translate(cx, cy);
+        stageCtx.scale(scale, scale);
+
+        const p = smoothstep(0.1, 0.95, progress);
+
+        stageCtx.beginPath();
+        stageCtx.moveTo(0, 10);
+        stageCtx.lineTo(0, 120);
+        stageCtx.strokeStyle = "#4d693f";
+        stageCtx.lineWidth = 3;
+        stageCtx.stroke();
+
+        for (let j = 0; j < 14 * p; j++) {
+          const yPos = 10 - j * 6.5;
+          stageCtx.fillStyle = j % 2 === 0 ? "#7c3aed" : "#8b5cf6";
+          stageCtx.beginPath();
+          stageCtx.ellipse(-4.5, yPos, 3.8, 6.5, -0.3, 0, Math.PI * 2);
+          stageCtx.fill();
+
+          stageCtx.beginPath();
+          stageCtx.ellipse(4.5, yPos, 3.8, 6.5, 0.3, 0, Math.PI * 2);
+          stageCtx.fill();
+        }
+
+        stageCtx.restore();
+      }
+
+      function drawYellowLily(cx, cy, progress, scale = 1) {
+        stageCtx.save();
+        stageCtx.translate(cx, cy);
+        stageCtx.scale(scale, scale);
+
+        const petalProg = smoothstep(0.16, 0.96, progress);
+        const stamenProg = smoothstep(0.32, 1.0, progress);
+
+        stageCtx.beginPath();
+        stageCtx.moveTo(0, 0);
+        stageCtx.quadraticCurveTo(6, 60, -2, 135);
+        stageCtx.strokeStyle = "#38662d";
+        stageCtx.lineWidth = 4.5;
+        stageCtx.lineCap = "round";
+        stageCtx.stroke();
+
+        stageCtx.fillStyle = "#4d7c0f";
+        stageCtx.beginPath();
+        stageCtx.ellipse(0, 2, 6.5, 4, 0, 0, Math.PI * 2);
+        stageCtx.fill();
+
+        function drawLilyPetal(len, maxWid, isFront) {
+          const currentLen = len * petalProg;
+          const currentWid = maxWid * petalProg;
+
+          const grad = stageCtx.createLinearGradient(0, 0, 0, -currentLen);
+          grad.addColorStop(0, "#fef08a");
+          grad.addColorStop(0.3, "#f59e0b");
+          grad.addColorStop(0.7, "#fbbf24");
+          grad.addColorStop(1, "#fef9c3");
 
           stageCtx.fillStyle = grad;
           stageCtx.beginPath();
           stageCtx.moveTo(0, 0);
-          stageCtx.quadraticCurveTo(curWid, -curLen * 0.5, 0, -curLen);
-          stageCtx.quadraticCurveTo(-curWid, -curLen * 0.5, 0, 0);
+
+          stageCtx.bezierCurveTo(
+            -currentWid,
+            -currentLen * 0.35,
+            -currentWid * 0.85,
+            -currentLen * 0.75,
+            0,
+            -currentLen,
+          );
+
+          stageCtx.bezierCurveTo(
+            currentWid * 0.85,
+            -currentLen * 0.75,
+            currentWid,
+            -currentLen * 0.35,
+            0,
+            0,
+          );
           stageCtx.fill();
-          stageCtx.restore();
-        }
-      });
 
-      const totalSeeds = 230;
-      const activeSeeds = Math.floor(totalSeeds * coreProgress);
-      const c = 3.2;
-
-      for (let i = 0; i < activeSeeds; i++) {
-        const r = c * Math.sqrt(i);
-        const theta = i * GOLDEN_ANGLE;
-        const x = r * Math.cos(theta);
-        const y = r * Math.sin(theta);
-        const ratio = r / (c * Math.sqrt(totalSeeds));
-
-        stageCtx.beginPath();
-        stageCtx.arc(x, y, 1.2 + (r / 40), 0, Math.PI * 2);
-        stageCtx.fillStyle = ratio < 0.35 ? '#241406' : (ratio < 0.7 ? '#4d2b0e' : '#784315');
-        stageCtx.fill();
-      }
-
-      stageCtx.restore();
-    }
-
-    // --- 02. manzanilla (sin jitter) ---
-    function drawChamomileFlower(cx, cy, progress, scale = 1) {
-      return
-      stageCtx.save();
-      stageCtx.translate(cx, cy);
-      stageCtx.scale(scale, scale);
-
-      stageCtx.beginPath();
-      stageCtx.moveTo(0, 10);
-      stageCtx.quadraticCurveTo(-6, 60, -2, 130);
-      stageCtx.strokeStyle = '#3e6a32';
-      stageCtx.lineWidth = 4;
-      stageCtx.stroke();
-
-      const petalProgress = smoothstep(0.15, 0.9, progress);
-      const coreProgress = smoothstep(0.3, 1.0, progress);
-
-      const petalCount = 18;
-      for (let i = 0; i < petalCount; i++) {
-        const angle = (i / petalCount) * Math.PI * 2;
-        stageCtx.save();
-        stageCtx.rotate(angle);
-        const curLen = 60 * petalProgress;
-        const curWid = 13 * petalProgress;
-
-        stageCtx.fillStyle = 'rgba(255, 255, 255, 0.96)';
-        stageCtx.beginPath();
-        stageCtx.moveTo(0, 4);
-        stageCtx.quadraticCurveTo(curWid, -curLen * 0.45, 0, -curLen);
-        stageCtx.quadraticCurveTo(-curWid, -curLen * 0.45, 0, 4);
-        stageCtx.fill();
-
-        stageCtx.strokeStyle = 'rgba(215, 205, 185, 0.6)';
-        stageCtx.lineWidth = 0.8;
-        stageCtx.beginPath();
-        stageCtx.moveTo(0, 0);
-        stageCtx.lineTo(0, -curLen * 0.75);
-        stageCtx.stroke();
-        stageCtx.restore();
-      }
-
-      const domeRadius = 21 * coreProgress;
-      const grad = stageCtx.createRadialGradient(-3, -3, 2, 0, 0, domeRadius);
-      grad.addColorStop(0, '#fef08a');
-      grad.addColorStop(0.4, '#eab308');
-      grad.addColorStop(1, '#ca8a04');
-
-      stageCtx.beginPath();
-      stageCtx.arc(0, 0, domeRadius, 0, Math.PI * 2);
-      stageCtx.fillStyle = grad;
-      stageCtx.fill();
-
-      const domeSeeds = Math.floor(42 * coreProgress);
-      for (let i = 0; i < domeSeeds; i++) {
-        const r = (domeRadius - 2.5) * Math.sqrt(i / 42);
-        const theta = i * 2.39996;
-        stageCtx.beginPath();
-        stageCtx.arc(r * Math.cos(theta), r * Math.sin(theta), 1.1, 0, Math.PI * 2);
-        stageCtx.fillStyle = 'rgba(161, 98, 7, 0.65)';
-        stageCtx.fill();
-      }
-
-      stageCtx.restore();
-    }
-
-    // --- lavanda ---
-    function drawLavender(cx, cy, progress, scale = 1) {
-      stageCtx.save();
-      stageCtx.translate(cx, cy);
-      stageCtx.scale(scale, scale);
-
-      const p = smoothstep(0.1, 0.95, progress);
-
-      stageCtx.beginPath();
-      stageCtx.moveTo(0, 10);
-      stageCtx.lineTo(0, 120);
-      stageCtx.strokeStyle = '#4d693f';
-      stageCtx.lineWidth = 3;
-      stageCtx.stroke();
-
-      for (let j = 0; j < 14 * p; j++) {
-        const yPos = 10 - j * 6.5;
-        stageCtx.fillStyle = j % 2 === 0 ? '#7c3aed' : '#8b5cf6';
-        stageCtx.beginPath();
-        stageCtx.ellipse(-4.5, yPos, 3.8, 6.5, -0.3, 0, Math.PI * 2);
-        stageCtx.fill();
-
-        stageCtx.beginPath();
-        stageCtx.ellipse(4.5, yPos, 3.8, 6.5, 0.3, 0, Math.PI * 2);
-        stageCtx.fill();
-      }
-
-      stageCtx.restore();
-    }
-
-    // --- lirio amarillo en caliz tridimensional (z-index por capas) ---
-    function drawYellowLily(cx, cy, progress, scale = 1) {
-      stageCtx.save();
-      stageCtx.translate(cx, cy);
-      stageCtx.scale(scale, scale);
-
-      const petalProg = smoothstep(0.16, 0.96, progress);
-      const stamenProg = smoothstep(0.32, 1.0, progress);
-
-      // 1. tallo continuo que abraza la base del caliz
-      stageCtx.beginPath();
-      stageCtx.moveTo(0, 0);
-      stageCtx.quadraticCurveTo(6, 60, -2, 135);
-      stageCtx.strokeStyle = '#38662d';
-      stageCtx.lineWidth = 4.5;
-      stageCtx.lineCap = 'round';
-      stageCtx.stroke();
-
-      // receptaculo botanico base
-      stageCtx.fillStyle = '#4d7c0f';
-      stageCtx.beginPath();
-      stageCtx.ellipse(0, 2, 6.5, 4, 0, 0, Math.PI * 2);
-      stageCtx.fill();
-
-      // funcion de renderizado de petalo con silueta lanceolada real de lirio
-      function drawLilyPetal(len, maxWid, isFront) {
-        const currentLen = len * petalProg;
-        const currentWid = maxWid * petalProg;
-
-        const grad = stageCtx.createLinearGradient(0, 0, 0, -currentLen);
-        grad.addColorStop(0, '#fef08a');   // garganta calida
-        grad.addColorStop(0.3, '#f59e0b');  // amarillo oro / ambar
-        grad.addColorStop(0.7, '#fbbf24');  // amarillo vivo
-        grad.addColorStop(1, '#fef9c3');    // punta luminosa
-
-        stageCtx.fillStyle = grad;
-        stageCtx.beginPath();
-        stageCtx.moveTo(0, 0);
-        // curva izquierda organica: abre en el tercio medio y afina hacia la punta
-        stageCtx.bezierCurveTo(-currentWid, -currentLen * 0.35, -currentWid * 0.85, -currentLen * 0.75, 0, -currentLen);
-        // curva derecha de retorno
-        stageCtx.bezierCurveTo(currentWid * 0.85, -currentLen * 0.75, currentWid, -currentLen * 0.35, 0, 0);
-        stageCtx.fill();
-
-        // nervadura central ambar
-        stageCtx.strokeStyle = 'rgba(217, 119, 6, 0.45)';
-        stageCtx.lineWidth = 1.1;
-        stageCtx.beginPath();
-        stageCtx.moveTo(0, 0);
-        stageCtx.lineTo(0, -currentLen * 0.85);
-        stageCtx.stroke();
-
-        // pecas oscuras en la garganta
-        if (petalProg > 0.6) {
-          stageCtx.fillStyle = 'rgba(120, 53, 15, 0.6)';
-          stageCtx.beginPath();
-          stageCtx.arc(-currentWid * 0.22, -currentLen * 0.24, 0.9, 0, Math.PI * 2);
-          stageCtx.arc(currentWid * 0.18, -currentLen * 0.28, 0.9, 0, Math.PI * 2);
-          stageCtx.arc(0, -currentLen * 0.35, 0.8, 0, Math.PI * 2);
-          stageCtx.arc(-currentWid * 0.14, -currentLen * 0.42, 0.8, 0, Math.PI * 2);
-          stageCtx.arc(currentWid * 0.15, -currentLen * 0.44, 0.7, 0, Math.PI * 2);
-          stageCtx.fill();
-        }
-      }
-
-      // --- capa 1 (fondo): 3 petalos traseros (0° y ±60°) ---
-      const backPetals = [
-        { rot: 0,     len: 88, wid: 23 }, // superior trasero central
-        { rot: -1.05, len: 82, wid: 22 }, // superior izquierdo (~ -60°)
-        { rot: 1.05,  len: 82, wid: 22 }  // superior derecho (~ +60°)
-      ];
-
-      backPetals.forEach(p => {
-        stageCtx.save();
-        stageCtx.rotate(p.rot);
-        drawLilyPetal(p.len, p.wid, false);
-        stageCtx.restore();
-      });
-
-      // --- capa 2 (medio): pistilo central y 6 estambres alargados ---
-      if (progress > 0.3) {
-        // estambres brotando del centro y abriendose hacia arriba
-        const stamens = [
-          { rot: -0.65, len: 44, antherRot: 0.35 },
-          { rot: -0.38, len: 50, antherRot: -0.2 },
-          { rot: -0.12, len: 53, antherRot: 0.1 },
-          { rot: 0.15,  len: 52, antherRot: 0.25 },
-          { rot: 0.42,  len: 48, antherRot: -0.3 },
-          { rot: 0.68,  len: 43, antherRot: 0.4 }
-        ];
-
-        stamens.forEach(s => {
-          stageCtx.save();
-          stageCtx.rotate(s.rot);
-          const sLen = s.len * stamenProg;
-
-          stageCtx.strokeStyle = '#d9f99d';
-          stageCtx.lineWidth = 1.3;
+          stageCtx.strokeStyle = "rgba(217, 119, 6, 0.45)";
+          stageCtx.lineWidth = 1.1;
           stageCtx.beginPath();
           stageCtx.moveTo(0, 0);
-          stageCtx.quadraticCurveTo(2, -sLen * 0.5, 3, -sLen);
+          stageCtx.lineTo(0, -currentLen * 0.85);
           stageCtx.stroke();
 
-          // antera en T con polen ambar/chocolate
-          stageCtx.save();
-          stageCtx.translate(3, -sLen);
-          stageCtx.rotate(s.antherRot);
-          stageCtx.fillStyle = '#78350f';
-          stageCtx.beginPath();
-          stageCtx.ellipse(0, 0, 4.8, 1.9, 0, 0, Math.PI * 2);
-          stageCtx.fill();
-          stageCtx.restore();
-
-          stageCtx.restore();
-        });
-
-        // pistilo central mas largo con estigma trilobulado
-        const pLen = 58 * stamenProg;
-        stageCtx.strokeStyle = '#65a30d';
-        stageCtx.lineWidth = 2.2;
-        stageCtx.beginPath();
-        stageCtx.moveTo(0, 0);
-        stageCtx.lineTo(0, -pLen);
-        stageCtx.stroke();
-
-        stageCtx.fillStyle = '#3f6212';
-        stageCtx.beginPath();
-        stageCtx.arc(0, -pLen, 3, 0, Math.PI * 2);
-        stageCtx.fill();
-      }
-
-      // --- capa 3 (frente, mayor z-index): petalos inferiores y petalo frontal ---
-      // al dibujarse despues, cubren naturalmente la base de los estambres y cierran el caliz
-      const frontPetals = [
-        { rot: -2.09, len: 78, wid: 23 }, // inferior izquierdo (~ -120°)
-        { rot: 2.09,  len: 78, wid: 23 }, // inferior derecho (~ +120°)
-        { rot: 3.14,  len: 66, wid: 26 }  // frontal inferior (180°, escorzo natural que mira al frente)
-      ];
-
-      frontPetals.forEach(p => {
-        stageCtx.save();
-        stageCtx.rotate(p.rot);
-        drawLilyPetal(p.len, p.wid, true);
-        stageCtx.restore();
-      });
-
-      stageCtx.restore();
-    }
-
-    // --- composicion de las 3 flores juntas ---
-    function drawBotanicalBouquet(cx, cy, progress, scale = 1) {
-      if (progress <= 0) return;
-      stageCtx.save();
-      stageCtx.translate(cx, cy);
-      stageCtx.scale(scale, scale);
-
-      // 1. espiga de lavanda a la izquierda
-      drawLavender(-58, 2, progress, 0.95);
-
-      // 2. lirio amarillo en caliz a la derecha
-      drawYellowLily(54, -4, progress, 0.88);
-
-      // 3. manzanilla en el centro al frente
-      drawChamomileFlower(-4, 14, progress, 0.96);
-
-      stageCtx.restore();
-    }
-
-    // --- 03. orbitas dobles ---
-    let orbitAngle = 0;
-    const trails = [];
-
-    function drawBinaryStars(cx, cy) {
-      orbitAngle += 0.024;
-      const rx = Math.min(cx * 0.65, 80);
-      const ry = rx * 0.6;
-
-      const x1 = cx + Math.cos(orbitAngle) * rx;
-      const y1 = cy + Math.sin(orbitAngle) * ry;
-
-      const x2 = cx + Math.cos(orbitAngle + Math.PI) * rx;
-      const y2 = cy + Math.sin(orbitAngle + Math.PI) * ry;
-
-      trails.push({ x1, y1, x2, y2, alpha: 1 });
-      if (trails.length > 40) trails.shift();
-
-      trails.forEach(t => {
-        t.alpha *= 0.94;
-        stageCtx.beginPath();
-        stageCtx.arc(t.x1, t.y1, 2, 0, Math.PI * 2);
-        stageCtx.fillStyle = `rgba(29, 78, 216, ${t.alpha * 0.75})`;
-        stageCtx.fill();
-
-        stageCtx.beginPath();
-        stageCtx.arc(t.x2, t.y2, 2.5, 0, Math.PI * 2);
-        stageCtx.fillStyle = `rgba(23, 23, 26, ${t.alpha * 0.55})`;
-        stageCtx.fill();
-      });
-
-      stageCtx.beginPath();
-      stageCtx.arc(cx, cy, 3, 0, Math.PI * 2);
-      stageCtx.fillStyle = 'rgba(198, 138, 26, 0.6)';
-      stageCtx.fill();
-
-      // estrella veronica
-      const gradBlue = stageCtx.createRadialGradient(x1, y1, 2, x1, y1, 20);
-      gradBlue.addColorStop(0, '#ffffff');
-      gradBlue.addColorStop(0.4, '#1d4ed8');
-      gradBlue.addColorStop(1, 'transparent');
-      stageCtx.beginPath();
-      stageCtx.arc(x1, y1, 20, 0, Math.PI * 2);
-      stageCtx.fillStyle = gradBlue;
-      stageCtx.fill();
-
-      // estrella jd
-      const gradDark = stageCtx.createRadialGradient(x2, y2, 3, x2, y2, 22);
-      gradDark.addColorStop(0, '#111113');
-      gradDark.addColorStop(0.5, '#312e81');
-      gradDark.addColorStop(1, 'transparent');
-      stageCtx.beginPath();
-      stageCtx.arc(x2, y2, 22, 0, Math.PI * 2);
-      stageCtx.fillStyle = gradDark;
-      stageCtx.fill();
-
-      stageCtx.beginPath();
-      stageCtx.arc(x2, y2, 6, 0, Math.PI * 2);
-      stageCtx.fillStyle = '#09090b';
-      stageCtx.fill();
-    }
-
-    function animate() {
-      bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
-      particles.forEach(p => {
-        p.y -= p.speedY;
-        p.phase += 0.02;
-        const curX = p.x + Math.sin(p.phase) * 1.5;
-        if (p.y < -10) { p.y = bgCanvas.height + 10; p.x = Math.random() * bgCanvas.width; }
-        bgCtx.beginPath();
-        bgCtx.arc(curX, p.y, p.size, 0, Math.PI * 2);
-        bgCtx.fillStyle = p.color;
-        bgCtx.globalAlpha = 0.35;
-        bgCtx.fill();
-        bgCtx.globalAlpha = 1;
-      });
-
-      stageCtx.clearRect(0, 0, stageWidth, stageHeight);
-
-      if (stageWidth && stageHeight) {
-        const cx = stageWidth / 2;
-        const cy = stageHeight / 2;
-
-        if (bloomProgress < 1) {
-          bloomProgress += 0.012;
-        }
-
-        const scale = Math.min(stageWidth / 320, stageHeight / 320, 1);
-
-        if (currentTab === 0) {
-          drawSunflower(cx, cy - 20 * scale, bloomProgress, scale);
-        } else if (currentTab === 1) {
-          drawBotanicalBouquet(cx, cy - 10 * scale, bloomProgress, scale * 0.95);
-        } else if (currentTab === 2) {
-          drawBinaryStars(cx, cy);
-        }
-
-        extraFlowers.forEach(f => {
-          f.progress = Math.min(1, f.progress + 0.04);
-          if (f.type === 'chamomile') {
-            drawChamomileFlower(f.x, f.y, f.progress, f.scale);
-          } else if (f.type === 'lily') {
-            drawYellowLily(f.x, f.y, f.progress, f.scale);
-          } else if (f.type === 'lavender') {
-            drawLavender(f.x, f.y, f.progress, f.scale);
-          } else {
-            drawSunflower(f.x, f.y, f.progress, f.scale);
+          if (petalProg > 0.6) {
+            stageCtx.fillStyle = "rgba(120, 53, 15, 0.6)";
+            stageCtx.beginPath();
+            stageCtx.arc(
+              -currentWid * 0.22,
+              -currentLen * 0.24,
+              0.9,
+              0,
+              Math.PI * 2,
+            );
+            stageCtx.arc(
+              currentWid * 0.18,
+              -currentLen * 0.28,
+              0.9,
+              0,
+              Math.PI * 2,
+            );
+            stageCtx.arc(0, -currentLen * 0.35, 0.8, 0, Math.PI * 2);
+            stageCtx.arc(
+              -currentWid * 0.14,
+              -currentLen * 0.42,
+              0.8,
+              0,
+              Math.PI * 2,
+            );
+            stageCtx.arc(
+              currentWid * 0.15,
+              -currentLen * 0.44,
+              0.7,
+              0,
+              Math.PI * 2,
+            );
+            stageCtx.fill();
           }
-        });
-      }
-
-      requestAnimationFrame(animate);
-    }
-
-    // clics distribuidos equitativamente
-    visualPanel.addEventListener('pointerdown', (e) => {
-      const rect = visualPanel.getBoundingClientRect();
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-
-      let flowerType = 'sunflower';
-      if (currentTab === 1) {
-        const pick = Math.random();
-        if (pick < 0.34) {
-          flowerType = 'chamomile';
-        } else if (pick < 0.68) {
-          flowerType = 'lily';
-        } else {
-          flowerType = 'lavender';
         }
+
+        const backPetals = [
+          { rot: 0, len: 88, wid: 23 },
+          { rot: -1.05, len: 82, wid: 22 },
+          { rot: 1.05, len: 82, wid: 22 },
+        ];
+
+        backPetals.forEach((p) => {
+          stageCtx.save();
+          stageCtx.rotate(p.rot);
+          drawLilyPetal(p.len, p.wid, false);
+          stageCtx.restore();
+        });
+
+        if (progress > 0.3) {
+          const stamens = [
+            { rot: -0.65, len: 44, antherRot: 0.35 },
+            { rot: -0.38, len: 50, antherRot: -0.2 },
+            { rot: -0.12, len: 53, antherRot: 0.1 },
+            { rot: 0.15, len: 52, antherRot: 0.25 },
+            { rot: 0.42, len: 48, antherRot: -0.3 },
+            { rot: 0.68, len: 43, antherRot: 0.4 },
+          ];
+
+          stamens.forEach((s) => {
+            stageCtx.save();
+            stageCtx.rotate(s.rot);
+            const sLen = s.len * stamenProg;
+
+            stageCtx.strokeStyle = "#d9f99d";
+            stageCtx.lineWidth = 1.3;
+            stageCtx.beginPath();
+            stageCtx.moveTo(0, 0);
+            stageCtx.quadraticCurveTo(2, -sLen * 0.5, 3, -sLen);
+            stageCtx.stroke();
+
+            stageCtx.save();
+            stageCtx.translate(3, -sLen);
+            stageCtx.rotate(s.antherRot);
+            stageCtx.fillStyle = "#78350f";
+            stageCtx.beginPath();
+            stageCtx.ellipse(0, 0, 4.8, 1.9, 0, 0, Math.PI * 2);
+            stageCtx.fill();
+            stageCtx.restore();
+
+            stageCtx.restore();
+          });
+
+          const pLen = 58 * stamenProg;
+          stageCtx.strokeStyle = "#65a30d";
+          stageCtx.lineWidth = 2.2;
+          stageCtx.beginPath();
+          stageCtx.moveTo(0, 0);
+          stageCtx.lineTo(0, -pLen);
+          stageCtx.stroke();
+
+          stageCtx.fillStyle = "#3f6212";
+          stageCtx.beginPath();
+          stageCtx.arc(0, -pLen, 3, 0, Math.PI * 2);
+          stageCtx.fill();
+        }
+
+        const frontPetals = [
+          { rot: -2.09, len: 78, wid: 23 },
+          { rot: 2.09, len: 78, wid: 23 },
+          { rot: 3.14, len: 66, wid: 26 },
+        ];
+
+        frontPetals.forEach((p) => {
+          stageCtx.save();
+          stageCtx.rotate(p.rot);
+          drawLilyPetal(p.len, p.wid, true);
+          stageCtx.restore();
+        });
+
+        stageCtx.restore();
       }
 
-      extraFlowers.push({
-        x: clickX,
-        y: clickY,
-        progress: 0,
-        scale: Math.random() * 0.22 + 0.2,
-        type: flowerType
-      });
-      if (extraFlowers.length > 15) extraFlowers.shift();
-    });
+      function drawBotanicalBouquet(cx, cy, progress, scale = 1) {
+        if (progress <= 0) return;
+        stageCtx.save();
+        stageCtx.translate(cx, cy);
+        stageCtx.scale(scale, scale);
 
-    resize();
-    animate();
-  </script>
-</body>
+        drawLavender(-58, 2, progress, 0.95);
+
+        drawYellowLily(54, -4, progress, 0.88);
+
+        drawChamomileFlower(-4, 14, progress, 0.96);
+
+        stageCtx.restore();
+      }
+
+      let orbitAngle = 0;
+      const trails = [];
+
+      function drawBinaryStars(cx, cy) {
+        orbitAngle += 0.024;
+        const rx = Math.min(cx * 0.65, 80);
+        const ry = rx * 0.6;
+
+        const x1 = cx + Math.cos(orbitAngle) * rx;
+        const y1 = cy + Math.sin(orbitAngle) * ry;
+
+        const x2 = cx + Math.cos(orbitAngle + Math.PI) * rx;
+        const y2 = cy + Math.sin(orbitAngle + Math.PI) * ry;
+
+        trails.push({ x1, y1, x2, y2, alpha: 1 });
+        if (trails.length > 40) trails.shift();
+
+        trails.forEach((t) => {
+          t.alpha *= 0.94;
+          stageCtx.beginPath();
+          stageCtx.arc(t.x1, t.y1, 2, 0, Math.PI * 2);
+          stageCtx.fillStyle = `rgba(29, 78, 216, ${t.alpha * 0.75})`;
+          stageCtx.fill();
+
+          stageCtx.beginPath();
+          stageCtx.arc(t.x2, t.y2, 2.5, 0, Math.PI * 2);
+          stageCtx.fillStyle = `rgba(23, 23, 26, ${t.alpha * 0.55})`;
+          stageCtx.fill();
+        });
+
+        stageCtx.beginPath();
+        stageCtx.arc(cx, cy, 3, 0, Math.PI * 2);
+        stageCtx.fillStyle = "rgba(198, 138, 26, 0.6)";
+        stageCtx.fill();
+
+        const gradBlue = stageCtx.createRadialGradient(x1, y1, 2, x1, y1, 20);
+        gradBlue.addColorStop(0, "#ffffff");
+        gradBlue.addColorStop(0.4, "#1d4ed8");
+        gradBlue.addColorStop(1, "transparent");
+        stageCtx.beginPath();
+        stageCtx.arc(x1, y1, 20, 0, Math.PI * 2);
+        stageCtx.fillStyle = gradBlue;
+        stageCtx.fill();
+
+        const gradDark = stageCtx.createRadialGradient(x2, y2, 3, x2, y2, 22);
+        gradDark.addColorStop(0, "#111113");
+        gradDark.addColorStop(0.5, "#312e81");
+        gradDark.addColorStop(1, "transparent");
+        stageCtx.beginPath();
+        stageCtx.arc(x2, y2, 22, 0, Math.PI * 2);
+        stageCtx.fillStyle = gradDark;
+        stageCtx.fill();
+
+        stageCtx.beginPath();
+        stageCtx.arc(x2, y2, 6, 0, Math.PI * 2);
+        stageCtx.fillStyle = "#09090b";
+        stageCtx.fill();
+      }
+
+      function animate() {
+        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        particles.forEach((p) => {
+          p.y -= p.speedY;
+          p.phase += 0.02;
+          const curX = p.x + Math.sin(p.phase) * 1.5;
+          if (p.y < -10) {
+            p.y = bgCanvas.height + 10;
+            p.x = Math.random() * bgCanvas.width;
+          }
+          bgCtx.beginPath();
+          bgCtx.arc(curX, p.y, p.size, 0, Math.PI * 2);
+          bgCtx.fillStyle = p.color;
+          bgCtx.globalAlpha = 0.35;
+          bgCtx.fill();
+          bgCtx.globalAlpha = 1;
+        });
+
+        stageCtx.clearRect(0, 0, stageWidth, stageHeight);
+
+        if (stageWidth && stageHeight) {
+          const cx = stageWidth / 2;
+          const cy = stageHeight / 2;
+
+          if (bloomProgress < 1) {
+            bloomProgress += 0.012;
+          }
+
+          const scale = Math.min(stageWidth / 320, stageHeight / 320, 1);
+
+          if (currentTab === 0) {
+            drawSunflower(cx, cy - 20 * scale, bloomProgress, scale);
+          } else if (currentTab === 1) {
+            drawBotanicalBouquet(
+              cx,
+              cy - 10 * scale,
+              bloomProgress,
+              scale * 0.95,
+            );
+          } else if (currentTab === 2) {
+            drawBinaryStars(cx, cy);
+          }
+
+          extraFlowers.forEach((f) => {
+            f.progress = Math.min(1, f.progress + 0.04);
+            if (f.type === "chamomile") {
+              drawChamomileFlower(f.x, f.y, f.progress, f.scale);
+            } else if (f.type === "lily") {
+              drawYellowLily(f.x, f.y, f.progress, f.scale);
+            } else if (f.type === "lavender") {
+              drawLavender(f.x, f.y, f.progress, f.scale);
+            } else {
+              drawSunflower(f.x, f.y, f.progress, f.scale);
+            }
+          });
+        }
+
+        requestAnimationFrame(animate);
+      }
+
+      visualPanel.addEventListener("pointerdown", (e) => {
+        const rect = visualPanel.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        let flowerType = "sunflower";
+        if (currentTab === 1) {
+          const pick = Math.random();
+          if (pick < 0.34) {
+            flowerType = "chamomile";
+          } else if (pick < 0.68) {
+            flowerType = "lily";
+          } else {
+            flowerType = "lavender";
+          }
+        }
+
+        extraFlowers.push({
+          x: clickX,
+          y: clickY,
+          progress: 0,
+          scale: Math.random() * 0.22 + 0.2,
+          type: flowerType,
+        });
+        if (extraFlowers.length > 15) extraFlowers.shift();
+      });
+
+      resize();
+      animate();
+    </script>
+  </body>
 </html>
