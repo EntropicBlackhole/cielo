@@ -489,15 +489,12 @@
             relajante de la lavanda.
           </div>
 
-          <p>
-            todo cuenta para el 21 de septiembre. toca el panel, ahora brotan
-            manzanillas, lirios amarillos o lavanda al azar.
-          </p>
+        <p>todo cuenta para el 21 (bueno 22) de septiembre, toca el panel, ahora brotan manzanillas, lirios amarillos o lavanda al azar</p>
 
-          <div class="quote-badge">
-            "tecnicamente amarilla, indiscutiblemente tuya\<3"
-          </div>
+        <div class="quote-badge">
+          "tecnicamente amarilla, indiscutiblemente tuya<3"
         </div>
+      </div>
 
         <!-- acta 03 -->
         <div class="content-panel" id="tab-2">
@@ -674,11 +671,11 @@
         stageCtx.restore();
       }
 
-      function drawChamomileFlower(cx, cy, progress, scale = 1) {
-        return;
-        stageCtx.save();
-        stageCtx.translate(cx, cy);
-        stageCtx.scale(scale, scale);
+    // --- 02. manzanilla (sin jitter) ---
+    function drawChamomileFlower(cx, cy, progress, scale = 1) {
+      stageCtx.save();
+      stageCtx.translate(cx, cy);
+      stageCtx.scale(scale, scale);
 
         stageCtx.beginPath();
         stageCtx.moveTo(0, 10);
