@@ -58,7 +58,7 @@
         pointer-events: none;
       }
 
-      /* sello de cera c + c */
+      /* sobre sellado inicial con c + c */
       #seal-overlay {
         position: absolute;
         inset: 0;
@@ -73,63 +73,159 @@
         justify-content: center;
         align-items: center;
         transition:
-          opacity 1s cubic-bezier(0.16, 1, 0.3, 1),
+          opacity 0.8s ease 0.35s,
           transform 1s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
       #seal-overlay.broken {
         opacity: 0;
-        transform: scale(1.06);
+        transform: scale(1.05);
         pointer-events: none;
       }
 
-      .wax-seal {
-        width: 110px;
-        height: 110px;
-        border-radius: 50%;
-        background: radial-gradient(
-          circle at 35% 35%,
-          #ba2d28,
-          var(--wax-red),
-          var(--wax-shadow)
-        );
-        box-shadow:
-          0 10px 25px rgba(0, 0, 0, 0.8),
-          inset 0 -4px 8px rgba(0, 0, 0, 0.5),
-          0 0 15px rgba(185, 43, 39, 0.35);
+      /* contenedor del sobre vintage */
+      .envelope-wrapper {
+        perspective: 1200px;
         display: flex;
         justify-content: center;
         align-items: center;
+        position: relative;
+      }
+
+      .vintage-envelope {
+        position: relative;
+        width: 420px;
+        height: 275px;
+        background: #caa676;
+        background-image: radial-gradient(
+          circle at 50% 50%,
+          rgba(240, 220, 185, 0.18) 0%,
+          rgba(120, 85, 45, 0.28) 100%
+        );
+        border-radius: 10px;
+        box-shadow: 
+          0 25px 60px rgba(0, 0, 0, 0.85),
+          0 10px 22px rgba(0, 0, 0, 0.6),
+          inset 0 0 45px rgba(95, 65, 30, 0.35);
+        border: 1px solid #7d5e38;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      /* fondo interior oscuro del sobre */
+      .envelope-interior {
+        position: absolute;
+        inset: 7px;
+        background: #4a341e;
+        border-radius: 6px;
+        box-shadow: inset 0 12px 28px rgba(0, 0, 0, 0.75);
+      }
+
+      /* borde de la carta asomándose adentro */
+      .envelope-letter-peek {
+        position: absolute;
+        top: 14px;
+        width: 90%;
+        height: 72%;
+        background: #e8d8bd;
+        border-radius: 5px;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.35);
+        border: 1px solid #c2a67e;
+        transition: transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      /* solapas plegadas */
+      .envelope-flap {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+      }
+
+      .flap-left {
+        background: #c39e6d;
+        clip-path: polygon(0 0, 0 100%, 52% 50%);
+        box-shadow: inset -4px 0 14px rgba(80, 50, 20, 0.25);
+      }
+
+      .flap-right {
+        background: #b89362;
+        clip-path: polygon(100% 0, 100% 100%, 48% 50%);
+        box-shadow: inset 4px 0 14px rgba(80, 50, 20, 0.3);
+      }
+
+      .flap-bottom {
+        background: #cfab7c;
+        clip-path: polygon(0 100%, 100% 100%, 50% 44%);
+        filter: drop-shadow(0 -3px 6px rgba(60, 40, 15, 0.3));
+      }
+
+      .flap-top {
+        background: #d8b485;
+        clip-path: polygon(0 0, 100% 0, 50% 56%);
+        transform-origin: top center;
+        transition: transform 0.75s cubic-bezier(0.4, 0, 0.2, 1);
+        filter: drop-shadow(0 6px 12px rgba(60, 40, 15, 0.45));
+        z-index: 2;
+      }
+
+      /* sello de cera en la unión central */
+      .vintage-envelope .wax-seal {
+        position: absolute;
+        top: 55%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        width: 145px;
+        height: 145px;
         cursor: pointer;
-        border: 3px dashed rgba(255, 255, 255, 0.25);
-        transition:
-          transform 0.2s ease,
-          box-shadow 0.2s ease;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: none;
+        border: none;
+        filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.85)) drop-shadow(0 2px 6px rgba(180, 40, 30, 0.35));
+        transition: transform 0.25s cubic-bezier(0.17, 0.89, 0.32, 1.25), filter 0.25s ease, opacity 0.5s ease;
       }
 
-      .wax-seal:active,
-      .wax-seal:hover {
-        transform: scale(1.05);
-        box-shadow:
-          0 14px 28px rgba(0, 0, 0, 0.9),
-          0 0 20px rgba(230, 80, 70, 0.45);
+      .vintage-envelope .wax-seal:hover, 
+      .vintage-envelope .wax-seal:active {
+        transform: translate(-50%, -50%) scale(1.06);
+        filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 16px rgba(220, 70, 50, 0.45));
       }
 
-      .wax-seal::after {
-        content: "c + c";
-        color: #ffd8ba;
-        font-size: 1.25rem;
-        font-weight: bold;
-        letter-spacing: 3px;
-        opacity: 0.92;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+      .wax-seal svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+        overflow: visible;
+      }
+
+      /* animación de apertura */
+      #seal-overlay.broken .flap-top {
+        transform: rotateX(175deg);
+        filter: drop-shadow(0 -6px 8px rgba(0, 0, 0, 0.4));
+      }
+
+      #seal-overlay.broken .envelope-letter-peek {
+        transform: translateY(-38px);
+      }
+
+      #seal-overlay.broken .wax-seal {
+        transform: translate(-50%, -65%) scale(0.92);
+        opacity: 0;
+      }
+
+      #seal-overlay.broken .vintage-envelope {
+        transform: translateY(25px) scale(0.97);
       }
 
       .seal-hint {
         color: #d1b894;
         font-size: 0.85rem;
         letter-spacing: 1.5px;
-        margin-top: 24px;
+        margin-top: 28px;
         opacity: 0.75;
         text-align: center;
         padding: 0 20px;
@@ -341,6 +437,14 @@
       }
 
       @media (max-width: 768px) {
+        .vintage-envelope {
+          width: 320px;
+          height: 215px;
+        }
+        .vintage-envelope .wax-seal {
+          width: 120px;
+          height: 120px;
+        }
         .notebook-container {
           width: 96%;
           height: 92dvh;
@@ -394,16 +498,126 @@
           opacity: 0.95;
         }
       }
+
+      .hide-scrollbar {
+        /* 1. Ensure scrolling is still enabled */
+        overflow: auto; 
+        
+        /* 2. Hide for Firefox */
+        scrollbar-width: none; 
+        
+        /* 3. Hide for IE and legacy Edge */
+        -ms-overflow-style: none; 
+      }
+
+      /* 4. Hide for Chrome, Safari, and Opera */
+      .hide-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
     </style>
   </head>
   <body>
     <canvas id="bg-canvas"></canvas>
 
     <div id="seal-overlay">
-      <div class="wax-seal" id="wax-seal" title="abrir expediente"></div>
+      <div class="envelope-wrapper">
+        <div class="vintage-envelope">
+          <!-- interior del sobre y carta asomándose -->
+          <div class="envelope-interior"></div>
+          <div class="envelope-letter-peek"></div>
+          
+          <!-- solapas plegadas del sobre -->
+          <div class="envelope-flap flap-left"></div>
+          <div class="envelope-flap flap-right"></div>
+          <div class="envelope-flap flap-bottom"></div>
+          <div class="envelope-flap flap-top"></div>
+          <div class="wax-seal" id="wax-seal" title="abrir expediente">
+        <svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <!-- degradado del borde exterior fundido -->
+            <radialGradient id="wax-rim" cx="38%" cy="32%" r="68%">
+              <stop offset="0%" stop-color="#df5b4b"/>
+              <stop offset="35%" stop-color="#ba3026"/>
+              <stop offset="70%" stop-color="#821915"/>
+              <stop offset="100%" stop-color="#460b09"/>
+            </radialGradient>
+  
+            <!-- degradado del lecho central prensado -->
+            <radialGradient id="wax-bed" cx="44%" cy="40%" r="58%">
+              <stop offset="0%" stop-color="#ca3b30"/>
+              <stop offset="55%" stop-color="#9a221b"/>
+              <stop offset="85%" stop-color="#701512"/>
+              <stop offset="100%" stop-color="#440907"/>
+            </radialGradient>
+  
+            <!-- sombra de incisión para el grabado en bajo relieve -->
+            <filter id="carve" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="1.2" stdDeviation="0.6" flood-color="#ffb8a0" flood-opacity="0.3"/>
+              <feDropShadow dx="0" dy="-1.4" stdDeviation="0.8" flood-color="#2a0504" flood-opacity="0.9"/>
+            </filter>
+          </defs>
+  
+          <!-- 1. perímetro orgánico de cera fundida e irregular -->
+          <path d="M 100,10 C 124,8 138,20 153,30 C 168,40 186,56 190,76 C 195,96 186,114 186,130 C 185,150 173,168 155,180 C 137,192 116,195 96,192 C 76,190 56,183 40,168 C 24,152 13,133 10,113 C 8,93 18,74 29,58 C 41,40 58,22 78,14 C 86,11 93,10 100,10 Z"
+                fill="url(#wax-rim)"/>
+  
+          <!-- 2. anillo biselado exterior con sombras y relieves de presión -->
+          <circle cx="100" cy="100" r="69" stroke="#460b09" stroke-width="4.5" opacity="0.8"/>
+          <circle cx="100" cy="100" r="66" stroke="#ea6d5c" stroke-width="1.2" opacity="0.45"/>
+  
+          <!-- 3. lecho interior deprimido -->
+          <circle cx="100" cy="100" r="65" fill="url(#wax-bed)"/>
+          <circle cx="100" cy="100" r="63.5" stroke="#380807" stroke-width="2.5" opacity="0.75"/>
+  
+          <!-- 4. ornamentos botánicos y corazón en bajo relieve -->
+          <g filter="url(#carve)" stroke="#4a0c0a" stroke-linecap="round" stroke-linejoin="round">
+            
+            <!-- corona botánica de 3 hojas superior -->
+            <path d="M 100,67 C 98,73 98,79 100,83 C 102,79 102,73 100,67 Z" fill="#4a0c0a"/>
+            <path d="M 100,83 C 94,80 87,77 87,72 C 92,72 97,76 100,83 Z" fill="#4a0c0a"/>
+            <path d="M 100,83 C 106,80 113,77 113,72 C 108,72 103,76 100,83 Z" fill="#4a0c0a"/>
+  
+            <!-- cuentas decorativas laterales -->
+            <circle cx="75" cy="77" r="2.2" fill="#4a0c0a"/>
+            <circle cx="66" cy="85" r="2.8" fill="#4a0c0a"/>
+            <circle cx="62" cy="95" r="1.8" fill="#4a0c0a"/>
+  
+            <circle cx="125" cy="77" r="2.2" fill="#4a0c0a"/>
+            <circle cx="134" cy="85" r="2.8" fill="#4a0c0a"/>
+            <circle cx="138" cy="95" r="1.8" fill="#4a0c0a"/>
+  
+            <!-- ramas y hojas de laurel curvadas en la base -->
+            <path d="M 100,143 C 86,146 72,138 61,122 C 53,110 54,98 64,94" stroke-width="2.6" fill="none"/>
+            <path d="M 78,138 C 70,144 59,142 57,136 C 63,132 72,132 78,138 Z" fill="#4a0c0a"/>
+            <path d="M 64,124 C 53,126 47,120 47,114 C 54,112 61,116 64,124 Z" fill="#4a0c0a"/>
+  
+            <path d="M 100,143 C 114,146 128,138 139,122 C 147,110 146,98 136,94" stroke-width="2.6" fill="none"/>
+            <path d="M 122,138 C 130,144 141,142 143,136 C 137,132 128,132 122,138 Z" fill="#4a0c0a"/>
+            <path d="M 136,124 C 147,126 153,120 153,114 C 146,112 139,116 136,124 Z" fill="#4a0c0a"/>
+  
+            <!-- contorno del corazón central -->
+            <path d="M 100,93 C 93,79 73,79 67,93 C 59,111 81,127 100,141 C 119,127 141,111 133,93 C 127,79 107,79 100,93 Z"
+                  stroke-width="3" fill="#881c17" fill-opacity="0.35"/>
+          </g>
+  
+          <!-- 5. inscripción c + c grabada en el corazón -->
+          <text x="101" y="112.5"
+                font-family="'Courier New', Courier, monospace"
+                font-size="12"
+                font-weight="900"
+                letter-spacing="2.5"
+                text-anchor="middle"
+                fill="#ffd1bd"
+                style="text-shadow: 0 -1.2px 1.5px #260504, 0 1.2px 1.5px rgba(255, 180, 160, 0.4); opacity: 0.95;">
+            c + c
+          </text>
+        </svg>
+          </div>
+        </div>
       <div class="seal-hint">
         toca el sello para abrir el expediente de cielo
       </div>
+    </div>
     </div>
 
     <div class="notebook-container" id="notebook">
